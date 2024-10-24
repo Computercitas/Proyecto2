@@ -5,6 +5,7 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import SnowballStemmer
 import numpy as np
 import pandas as pd
+import regex as re
 from collections import defaultdict, Counter
 import json  # Para almacenar bloques en disco
 
@@ -49,10 +50,10 @@ class SPIMI:
         self.bloques = []
         self.doc_id = 0
         self.bloque_actual = Bloque(output_path, len(self.bloques))
-        self.stop_words = set(stopwords.words('spanish'))
-        self.stemmer = SnowballStemmer('spanish')
-        # self.stop_words = set(stopwords.words('english'))
-        # self.stemmer = SnowballStemmer('english')
+        # self.stop_words = set(stopwords.words('spanish'))
+        # self.stemmer = SnowballStemmer('spanish')
+        self.stop_words = set(stopwords.words('english'))
+        self.stemmer = SnowballStemmer('english')
 
         """ 
         Pasa algo curioso a tener en cuenta, cuando uso spanish, trato de buscar la palabra "everybody" si la en cuentra:
@@ -71,6 +72,25 @@ class SPIMI:
         tokens = word_tokenize(texto.lower())
         tokens = [self.stemmer.stem(word) for word in tokens if word not in self.stop_words and word.isalpha()]
         return tokens
+    
+    import regex as re
+    nltk.download('stopwords')
+    stop_words = set(stopwords.words('english'))
+
+    def preProcesamiento(texto,stemming=True):
+        words = []
+        # 1- convertir a minusculas
+        texto = texto.lower()
+        # 2- eliminar signos con regex
+        texto = re.sub(r'[^a-zA-Z_À-ÿ]', ' ', texto) 
+        # 3- tokenizar
+        words = nltk.word_tokenize(texto, language='spanish')
+        # 3- eliminar stopwords
+        words = [word for word in words if word not in stop_words]
+        # 4- Aplicar reduccion de palabras (stemming)
+        if stemming:        
+            words = [stemmer.stem(word) for word in words]
+        return words
 
     def scoreTF(self, tf):
         # Calcula el score TF (Frecuencia de término)
@@ -82,10 +102,10 @@ class SPIMI:
 
     def construir_spimi(self):
         # Procesar el archivo en chunks y construir el índice invertido usando SPIMI
-        for chunk in self.cargar_archivo():
+        for chunk in self.cargar_archivo(): #itero por chunks
             for _, fila in chunk.iterrows():
                 self.doc_id += 1
-                texto = fila['lyrics']  # Uso la columna 'lyrics'
+                texto = fila['text']  # Uso la columna con los textos concatenados
                 tokens = self.preprocesar(texto)
 
                 for token in tokens:
@@ -114,16 +134,21 @@ class SPIMI:
                     else:
                         indice_final[termino] = doc_list
 
+            if os.path.exists(f"{self.output_path}/bloque_{i}.json"): #borrar los bloques luego de mergearlos
+                os.remove(f"{self.output_path}/bloque_{i}.json")
+                    
         # Guardar índice final
         with open(f"{self.output_path}/indice_final.json", 'w') as f:
             json.dump(indice_final, f)
+
+        print("Indice generado")
 
     def buscar(self, termino):
         # Realiza una búsqueda en el índice invertido final
         pass
 
 # Uso
-spimi = SPIMI(csv_path='./data/spotify_songs_100.csv', output_path='indice')
+spimi = SPIMI(csv_path='C:/Users/davie/VSCode_projects/Proyecto2/backend/data/spotify_songs_100_english.csv', output_path='indice')
 spimi.construir_spimi()
 spimi.merge()
 
