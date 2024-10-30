@@ -111,6 +111,9 @@ class SPIMI:
                 for token in tokens:
                     self.bloque_actual.agregar_termino(token, self.doc_id)
 
+                #ordenar bloque por llaves (para poder hacer merge)
+                self.bloque_actual.indice_invertido = defaultdict(list, sorted(self.bloque_actual.indice_invertido.items()))
+
                 # Límite de memoria alcanzado
                 if self.doc_id % self.memoria_maxima == 0:
                     self.bloques.append(self.bloque_actual)
@@ -122,6 +125,7 @@ class SPIMI:
             self.bloque_actual.guardar_en_disco()
             self.bloques.append(self.bloque_actual)
 
+    
     def merge(self):
         # Combina todos los bloques generados en disco en un índice invertido final
         indice_final = defaultdict(list)
@@ -134,21 +138,20 @@ class SPIMI:
                     else:
                         indice_final[termino] = doc_list
 
-            if os.path.exists(f"{self.output_path}/bloque_{i}.json"): #borrar los bloques luego de mergearlos
-                os.remove(f"{self.output_path}/bloque_{i}.json")
+            #if os.path.exists(f"{self.output_path}/bloque_{i}.json"): #borrar los bloques luego de mergearlos
+            #    os.remove(f"{self.output_path}/bloque_{i}.json")
                     
         # Guardar índice final
         with open(f"{self.output_path}/indice_final.json", 'w') as f:
             json.dump(indice_final, f)
 
         print("Indice generado")
-
+    
     def buscar(self, termino):
         # Realiza una búsqueda en el índice invertido final
         pass
 
 # Uso
-spimi = SPIMI(csv_path='C:/Users/davie/VSCode_projects/Proyecto2/backend/data/spotify_songs_100_english.csv', output_path='indice')
+spimi = SPIMI(csv_path='./backend/data/spotify_songs_100_english.csv', output_path='./backend/indice')
 spimi.construir_spimi()
 spimi.merge()
-
