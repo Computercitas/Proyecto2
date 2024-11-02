@@ -1,157 +1,198 @@
 import os
+import re
+import pandas as pd
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import SnowballStemmer
-import numpy as np
-import pandas as pd
-import regex as re
 from collections import defaultdict, Counter
-import json  # Para almacenar bloques en disco
+import numpy as np
+import json
+import heapq
+import time
+from langdetect import detect
 
+nltk.download('punkt')
 nltk.download('stopwords')
 
-class Bloque:
-    """
-    Bloque: Esta estuctura va a contener el índice invertido, pero no todo el índice invertido, sino solo una parte.
-    Lo que se hace es que se va a guardar en disco cada vez que se llene la memoria. (Esa es la idea)
-
-    """
-    def __init__(self, path, bloque_id):
-        # Directorio donde se guardará el bloque
-        self.path = path
-        # ID del bloque
-        self.bloque_id = bloque_id               
-        # Índice invertido del bloque   
-        self.indice_invertido = defaultdict(list)
-        # Contador de documentos en el bloque
-        self.doc_count = 0                          
-    
-    # Permite agregar un término al índice invertido del bloque
-    def agregar_termino(self, termino, doc_id):
-        if doc_id not in self.indice_invertido[termino]:
-            self.indice_invertido[termino].append(doc_id)
-    
-    # Se guarda el boque en disco en formato JSON
-    def guardar_en_disco(self):
-        if not os.path.exists(self.path):
-            os.makedirs(self.path)
-
-        with open(f"{self.path}/bloque_{self.bloque_id}.json", 'w') as f:
-            json.dump(self.indice_invertido, f)
-        # Limpiar el índice invertido después de guardarlo
-        self.indice_invertido = defaultdict(list)
-
 class SPIMI:
-    def __init__(self, csv_path, output_path, memoria_maxima=1000):
-        self.csv_path = csv_path
-        self.output_path = output_path
-        self.memoria_maxima = memoria_maxima  # Máximo número de documentos en memoria
-        self.bloques = []
-        self.doc_id = 0
-        self.bloque_actual = Bloque(output_path, len(self.bloques))
-        # self.stop_words = set(stopwords.words('spanish'))
-        # self.stemmer = SnowballStemmer('spanish')
-        self.stop_words = set(stopwords.words('english'))
+    def __init__(self, csv_path, bloqueTamano=5000, pathTemp='temp_bloques', indexF='final_index.json'):
+        self.data = self.cargarDatos(csv_path)
+        self.letra = self.data['lyrics'].fillna('').tolist()
+        self.metaData = self.data[['track_name', 'track_artist', 'track_album_name']].to_dict('records')
+        self.bloqueTamano = bloqueTamano
+        self.pathTemp = pathTemp
+        self.indexF = indexF
+        self.num_docs = len(self.letra)
+        self.stop_words = set(stopwords.words('spanish')).union(set(stopwords.words('english')))
         self.stemmer = SnowballStemmer('english')
+        self.tfidf_cache = defaultdict(dict)  # Cache for storing TF-IDF values
 
-        """ 
-        Pasa algo curioso a tener en cuenta, cuando uso spanish, trato de buscar la palabra "everybody" si la en cuentra:
-        "everybody": [5, 8, 19, 73, 83, 97]
-        pero en ingls, 
-        la tiene pero como #everybodi"
-        """
+        if not os.path.exists(self.pathTemp):
+            os.makedirs(self.pathTemp)
 
-    # Leer archivo CSV en trozos para evitar cargar todo en memoria
-    def cargar_archivo(self):
-        return pd.read_csv(self.csv_path, chunksize=1000)
+        self.construirSpimi()
+        self.merge()
+        self.eliminarIdx_n()
 
-    def preprocesar(self, texto):
-        # Convierte a minúsculas, tokeniza, remueve stopwords, aplica stemming
-        # Quiza falte un poco más de preprocesamiento (!)
+    def cargarDatos(self, path):
+        return pd.read_csv(path)
+
+    def preProceasmiento(self, texto):
+        if isinstance(texto, float):
+            return [] 
+        texto = re.sub(r'[^\x00-\x7F]+', '', texto) 
+        texto = re.sub(r'[^\w\s]', '', texto)
         tokens = word_tokenize(texto.lower())
         tokens = [self.stemmer.stem(word) for word in tokens if word not in self.stop_words and word.isalpha()]
         return tokens
-    
-    import regex as re
-    nltk.download('stopwords')
-    stop_words = set(stopwords.words('english'))
 
-    def preProcesamiento(texto,stemming=True):
-        words = []
-        # 1- convertir a minusculas
-        texto = texto.lower()
-        # 2- eliminar signos con regex
-        texto = re.sub(r'[^a-zA-Z_À-ÿ]', ' ', texto) 
-        # 3- tokenizar
-        words = nltk.word_tokenize(texto, language='spanish')
-        # 3- eliminar stopwords
-        words = [word for word in words if word not in stop_words]
-        # 4- Aplicar reduccion de palabras (stemming)
-        if stemming:        
-            words = [stemmer.stem(word) for word in words]
-        return words
+    def construirSpimi(self):
+        for bloqeuID, i in enumerate(range(0, len(self.letra), self.bloqueTamano)):
+            bloque = self.letra[i:i + self.bloqueTamano]
+            diccionario = defaultdict(list)
+            mormas = defaultdict(float)
 
-    def scoreTF(self, tf):
-        # Calcula el score TF (Frecuencia de término)
-        return np.log10(tf) + 1 if tf > 0 else 0
+            for doc_id, texto in enumerate(bloque):
+                tokens = self.preProceasmiento(texto)
+                term_freq = Counter(tokens)
 
-    def scoreIDF(self, N, df):
-        # Calcula el score IDF (Inversa de la Frecuencia en Documentos)
-        return np.log10(N / (1 + df))
+                for term, freq in term_freq.items():
+                    diccionario[term].append([i + doc_id, freq])
+                    mormas[str(i + doc_id)] += freq ** 2
 
-    def construir_spimi(self):
-        # Procesar el archivo en chunks y construir el índice invertido usando SPIMI
-        for chunk in self.cargar_archivo(): #itero por chunks
-            for _, fila in chunk.iterrows():
-                self.doc_id += 1
-                texto = fila['text']  # Uso la columna con los textos concatenados
-                tokens = self.preprocesar(texto)
+            bloque_data = {
+                'diccionario': dict(diccionario),
+                'mormas': dict(mormas)
+            }
 
-                for token in tokens:
-                    self.bloque_actual.agregar_termino(token, self.doc_id)
+            # Guardar como JSON
+            bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
+            with open(bloque_path, 'w', encoding='utf-8') as f:
+                json.dump(bloque_data, f, ensure_ascii=False)
 
-                #ordenar bloque por llaves (para poder hacer merge)
-                self.bloque_actual.indice_invertido = defaultdict(list, sorted(self.bloque_actual.indice_invertido.items()))
-
-                # Límite de memoria alcanzado
-                if self.doc_id % self.memoria_maxima == 0:
-                    self.bloques.append(self.bloque_actual)
-                    self.bloque_actual.guardar_en_disco()  # Guardar el bloque en memoria secundaria
-                    self.bloque_actual = Bloque(self.output_path, len(self.bloques))
-
-        # Guardar cualquier bloque restante
-        if self.bloque_actual.indice_invertido:
-            self.bloque_actual.guardar_en_disco()
-            self.bloques.append(self.bloque_actual)
-
-    
     def merge(self):
-        # Combina todos los bloques generados en disco en un índice invertido final
-        indice_final = defaultdict(list)
-        for i in range(len(self.bloques)):
-            with open(f"{self.output_path}/bloque_{i}.json", 'r') as f:
+        bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
+        heap = []
+        term_postings = defaultdict(list)
+        mormas = defaultdict(float)
+
+        # Cargar y procesar cada bloque JSON
+        for bloque_file in bloque_files:
+            with open(bloque_file, 'r', encoding='utf-8') as f:
                 bloque_data = json.load(f)
-                for termino, doc_list in bloque_data.items():
-                    if termino in indice_final:
-                        indice_final[termino].extend(doc_list)
-                    else:
-                        indice_final[termino] = doc_list
+                diccionario = bloque_data['diccionario']
+                bloque_mormas = bloque_data['mormas']
+                
+                for term, postings in diccionario.items():
+                    for posting in postings:
+                        heapq.heappush(heap, (term, tuple(posting))) 
+                
+                for doc_id, norm in bloque_mormas.items():
+                    mormas[int(doc_id)] += norm  # Convertir doc_id back to int
 
-            #if os.path.exists(f"{self.output_path}/bloque_{i}.json"): #borrar los bloques luego de mergearlos
-            #    os.remove(f"{self.output_path}/bloque_{i}.json")
-                    
-        # Guardar índice final
-        with open(f"{self.output_path}/indice_final.json", 'w') as f:
-            json.dump(indice_final, f)
+        while heap:
+            term, posting = heapq.heappop(heap)
+            term_postings[term].append(list(posting))  # Convertir tupla back a lista para JSON
 
-        print("Indice generado")
-    
-    def buscar(self, termino):
-        # Realiza una búsqueda en el índice invertido final
-        pass
+        # Calcular raíz cuadrada de las normas
+        mormas = {int(doc_id): np.sqrt(norm) for doc_id, norm in mormas.items()}
+
+        # Guardar índice final como JSON
+        final_index = {
+            'diccionario': dict(term_postings),
+            'mormas': mormas
+        }
+        
+        with open(self.indexF, 'w', encoding='utf-8') as f:
+            json.dump(final_index, f, ensure_ascii=False)
+
+        self.diccionario = term_postings
+        self.mormas = mormas
+
+    def cagarIndice(self):
+        with open(self.indexF, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            self.diccionario = defaultdict(list, data['diccionario'])
+            self.mormas = {int(k): v for k, v in data['mormas'].items()}
+
+    def calcularTFIDF(self, term, doc_id):
+        if term in self.tfidf_cache and doc_id in self.tfidf_cache[term]:
+            return self.tfidf_cache[term][doc_id]
+
+        term_postings = self.diccionario.get(term, [])
+        doc_freq = len(term_postings)
+        tf = next((freq for doc, freq in term_postings if doc == doc_id), 0)
+        idf = np.log(self.num_docs / (1 + doc_freq))
+        tfidf = tf * idf
+
+        self.tfidf_cache[term][doc_id] = tfidf
+        return tfidf
+
+    def similitudCoseno(self, query):
+        query_tokens = self.preProceasmiento(query)
+        query_vector = Counter(query_tokens)
+
+        query_tfidf_vector = {}
+        query_norm = 0.0
+        for term, count in query_vector.items():
+            if term in self.diccionario:
+                idf = np.log(self.num_docs / (1 + len(self.diccionario[term])))
+                query_tfidf = count * idf
+                query_tfidf_vector[term] = query_tfidf
+                query_norm += query_tfidf ** 2
+
+        query_norm = np.sqrt(query_norm) or 1.0
+
+        scores = defaultdict(float)
+
+        for term, query_tfidf in query_tfidf_vector.items():
+            query_tfidf /= query_norm
+            if term in self.diccionario:
+                for doc_id, freq in self.diccionario[term]:
+                    doc_tfidf = self.calcularTFIDF(term, doc_id) / self.mormas[doc_id]
+                    scores[doc_id] += query_tfidf * doc_tfidf
+
+        return scores
+
+    def busqueda_topK(self, query, k=5, additional_features=None):
+        if additional_features is None:
+            additional_features = []
+
+        # self.cagarIndice()
+
+        start_time = time.time()
+        scores = self.similitudCoseno(query)
+        sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+        top_k_results = sorted_scores[:k]
+
+        results = []
+        for doc_id, score in top_k_results:
+            metadata = self.metaData[doc_id]
+            result = {
+                'track_name': metadata['track_name'],
+                'row_position': doc_id+2,
+                'similitudCoseno': score
+            }
+            for feature in additional_features:
+                if feature in self.data.columns:
+                    result[feature] = self.data.iloc[doc_id][feature]
+            results.append(result)
+
+        end_time = time.time()
+
+        return {
+            'query_time': end_time - start_time,
+            'results': results
+        }
+
+    def eliminarIdx_n(self):
+        """
+        Limpia los archivos temporales JSON
+        """
+        for bloque_file in os.listdir(self.pathTemp):
+            os.remove(os.path.join(self.pathTemp, bloque_file))
+        os.rmdir(self.pathTemp)
 
 # Uso
-spimi = SPIMI(csv_path='./backend/data/spotify_songs_100_english.csv', output_path='./backend/indice')
-spimi.construir_spimi()
-spimi.merge()
+spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv', output_path='./backend/indice')
