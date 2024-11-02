@@ -3,3 +3,6 @@
 
 # Archivos de configuración de VS Code
 .vscode/
+
+# Archivos JSON en la carpeta de indice
+indice/*.json

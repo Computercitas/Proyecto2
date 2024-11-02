@@ -12,11 +12,12 @@ import heapq
 import time
 from langdetect import detect
 
+
 nltk.download('punkt')
 nltk.download('stopwords')
 
 class SPIMI:
-    def __init__(self, csv_path, bloqueTamano=5000, pathTemp='temp_bloques', indexF='final_index.json'):
+    def __init__(self, csv_path, bloqueTamano=5000, pathTemp='indice', indexF='indexFinal.json'):
         self.data = self.cargarDatos(csv_path)
         self.letra = self.data['lyrics'].fillna('').tolist()
         self.metaData = self.data[['track_name', 'track_artist', 'track_album_name']].to_dict('records')
@@ -26,17 +27,27 @@ class SPIMI:
         self.num_docs = len(self.letra)
         self.stop_words = set(stopwords.words('spanish')).union(set(stopwords.words('english')))
         self.stemmer = SnowballStemmer('english')
-        self.tfidf_cache = defaultdict(dict)  # Cache for storing TF-IDF values
+        self.tfidf_cache = defaultdict(dict)
+
+        self.diccionario = defaultdict(list)
+        self.mormas = defaultdict(float)
 
         if not os.path.exists(self.pathTemp):
             os.makedirs(self.pathTemp)
 
-        self.construirSpimi()
-        self.merge()
-        self.eliminarIdx_n()
+        if not os.path.isfile(self.indexF):
+            self.construirSpimi()
+            self.merge()
+            self.eliminarIdx_n()
+        self.cargarIndice()
 
     def cargarDatos(self, path):
         return pd.read_csv(path)
+
+    def eliminarIdx_n(self):
+        for bloque_file in os.listdir(self.pathTemp):
+            os.remove(os.path.join(self.pathTemp, bloque_file))
+        os.rmdir(self.pathTemp)
 
     def preProceasmiento(self, texto):
         if isinstance(texto, float):
@@ -66,7 +77,6 @@ class SPIMI:
                 'mormas': dict(mormas)
             }
 
-            # Guardar como JSON
             bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
             with open(bloque_path, 'w', encoding='utf-8') as f:
                 json.dump(bloque_data, f, ensure_ascii=False)
@@ -77,7 +87,6 @@ class SPIMI:
         term_postings = defaultdict(list)
         mormas = defaultdict(float)
 
-        # Cargar y procesar cada bloque JSON
         for bloque_file in bloque_files:
             with open(bloque_file, 'r', encoding='utf-8') as f:
                 bloque_data = json.load(f)
@@ -89,16 +98,14 @@ class SPIMI:
                         heapq.heappush(heap, (term, tuple(posting))) 
                 
                 for doc_id, norm in bloque_mormas.items():
-                    mormas[int(doc_id)] += norm  # Convertir doc_id back to int
+                    mormas[int(doc_id)] += norm
 
         while heap:
             term, posting = heapq.heappop(heap)
-            term_postings[term].append(list(posting))  # Convertir tupla back a lista para JSON
+            term_postings[term].append(list(posting))
 
-        # Calcular raíz cuadrada de las normas
         mormas = {int(doc_id): np.sqrt(norm) for doc_id, norm in mormas.items()}
 
-        # Guardar índice final como JSON
         final_index = {
             'diccionario': dict(term_postings),
             'mormas': mormas
@@ -107,10 +114,7 @@ class SPIMI:
         with open(self.indexF, 'w', encoding='utf-8') as f:
             json.dump(final_index, f, ensure_ascii=False)
 
-        self.diccionario = term_postings
-        self.mormas = mormas
-
-    def cagarIndice(self):
+    def cargarIndice(self):
         with open(self.indexF, 'r', encoding='utf-8') as f:
             data = json.load(f)
             self.diccionario = defaultdict(list, data['diccionario'])
@@ -159,8 +163,6 @@ class SPIMI:
         if additional_features is None:
             additional_features = []
 
-        # self.cagarIndice()
-
         start_time = time.time()
         scores = self.similitudCoseno(query)
         sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
@@ -185,14 +187,9 @@ class SPIMI:
             'query_time': end_time - start_time,
             'results': results
         }
-
-    def eliminarIdx_n(self):
-        """
-        Limpia los archivos temporales JSON
-        """
-        for bloque_file in os.listdir(self.pathTemp):
-            os.remove(os.path.join(self.pathTemp, bloque_file))
-        os.rmdir(self.pathTemp)
-
 # Uso
-spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv', output_path='./backend/indice')
+spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
+# Busqueda
+query = 'love'
+result = spimi.busqueda_topK(query, k=5)
+print(result)
