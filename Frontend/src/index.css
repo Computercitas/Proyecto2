@@ -18,6 +18,20 @@ body {
   padding: 20px;
 }
 
+/* Estilos para el componente de la consulta */
+.consulta-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Alinea los elementos a la izquierda */
+  justify-content: flex-start; /* No centra los elementos, solo alinea a la izquierda */
+  padding: 20px;
+  width: 100%;
+  max-width: 1200px; /* Aumenté el ancho máximo para más espacio */
+  background-color: #333; /* Fondo oscuro para el contenedor */
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
 h1 {
   font-size: 3rem;
   margin-bottom: 20px;
@@ -79,3 +93,87 @@ button:hover {
   color: #fff;  /* Asegúrate de que el color sea visible, por ejemplo, blanco */
 }
 
+
+/* Título */
+h2 {
+  color: white;
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+/* Estilo de los inputs y selectores en horizontal (para los tres campos) */
+.consulta-container > div {
+  display: flex;
+  justify-content: space-between; /* Espacio entre los elementos */
+  align-items: center;
+  margin-bottom: 20px; /* Espacio entre las filas */
+  width: 100%;
+}
+
+/* Estilo específico para cada contenedor de entrada de los tres campos */
+.consulta-container > div > div {
+  flex: 1; /* Cada campo ocupará el mismo ancho */
+  margin-right: 10px; /* Espacio entre los campos */
+}
+
+label {
+  color: white;
+  font-size: 1rem;
+  margin-right: 10px;
+  min-width: 180px; /* Asegura que las etiquetas no se desborden */
+}
+
+input, select {
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  width: 100%; /* Los inputs y selects se expandirán para llenar el espacio disponible */
+}
+
+/* Hacemos más grande el input de consulta SQL */
+input[type="text"] {
+  height: 100px;
+  font-size: 1.2rem;
+}
+
+/* Estilo para el botón de búsqueda */
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background-color: #4CAF50;
+  color: white;
+  transition: background-color 0.3s ease;
+  margin-top: 20px;
+}
+
+/* Hover efecto en el botón de búsqueda */
+button:hover {
+  background-color: #45a049;
+}
+
+/* Estilo para los resultados (ahora en lista vertical) */
+.results {
+  margin-top: 20px;
+  color: white;
+  font-size: 1.1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column; /* Asegura que los resultados estén en columna */
+  align-items: flex-start; /* Alinea los elementos de la lista a la izquierda */
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+  width: 100%;
+}
+
+li {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #444; /* Para separar los resultados con una línea */
+  padding-bottom: 10px;
+}
