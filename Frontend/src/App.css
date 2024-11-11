@@ -1,63 +1,68 @@
-/* Asegurar que el contenedor ocupe toda la altura de la pantalla */
+/* app.css */
+
+/* Estiliza la clase .home-container para ocupar todo el espacio del viewport */
 .home-container {
+  position: relative;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  justify-content: center;
-  height: 100vh; /* Esto asegura que el contenedor ocupe toda la altura de la pantalla */
-  text-align: center;
-  padding: 20px;
-  box-sizing: border-box; /* Asegura que el padding no afecte el tamaño del contenedor */
+  height: 100vh; /* Ocupa toda la altura del viewport */
+  width: 100vw;  /* Ocupa todo el ancho del viewport */
+  background-image: url('assets/f2.jpg');
+  background-size: cover; /* Asegúrate de que la imagen de fondo cubra todo el área */
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(80%);
 }
 
-/* Estilo del título */
-h1 {
-  font-size: 3rem;
-  margin-bottom: 20px;
-}
 
-/* Estilo de la descripción */
-p {
-  font-size: 1.2rem;
-  margin-bottom: 40px;
-  max-width: 600px;
-}
-
-/* Estilo del contenedor de los botones */
-.button-container {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-/* Estilo de los botones */
+/* Estilo común para ambos botones */
 .consulta-button, .github-button {
   padding: 10px 20px;
   font-size: 1rem;
   cursor: pointer;
   border: none;
-  border-radius: 5px;
-  transition: background-color 0.3s ease;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none; /* Elimina cualquier subrayado */
+  width: 150px; /* Asegura que ambos botones tengan el mismo tamaño */
 }
 
-/* Estilo del botón de Consulta */
+/* Estilo del botón de Consulta con fondo degradado verde */
 .consulta-button {
-  background-color: #4CAF50;
+  background: linear-gradient(to right, #4CAF50, #81C784); /* Fondo degradado verde */
   color: white;
 }
 
 /* Hover efecto en el botón de Consulta */
 .consulta-button:hover {
-  background-color: #45a049;
+  background: linear-gradient(to right, #45a049, #66bb6a); /* Fondo degradado verde más oscuro */
 }
 
 /* Estilo del botón de Github */
 .github-button {
   background-color: #333;
   color: white;
+  gap: 10px; /* Espacio entre el ícono y el texto */
 }
 
 /* Hover efecto en el botón de Github */
 .github-button:hover {
   background-color: #555;
+}
+
+/* Estilo del ícono de Github */
+.github-button i {
+  font-size: 1.5rem; /* Tamaño del ícono */
+}
+
+/* Eliminar el contorno azul al hacer foco en los botones */
+.consulta-button:focus, .github-button:focus {
+  outline: none;
+}
+
+/* Borde de enfoque personalizado */
+.consulta-button:focus, .github-button:focus {
+  outline: 2px solid #4CAF50; /* O cualquier otro color que prefieras */
+  outline-offset: 4px;
 }

@@ -1,31 +1,21 @@
-/* Asegura que el body tenga 100vh de alto y use flex para el contenido */
 body {
   margin: 0;
   display: flex;
-  justify-content: center; /* Centra horizontalmente */
-  align-items: center; /* Centra verticalmente */
-  min-height: 100vh; /* Ocupa toda la altura de la pantalla */
-  background-color: #242424; /* Fondo oscuro */
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #242424;
+  color: white;
+  font-family: 'Arial', sans-serif;
 }
 
-/* Contenedor principal que ocupa toda la pantalla y se alinea en el centro */
 .App {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  width: 100%;
-}
-
-/* Estilos para el componente Home */
-.home-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   padding: 20px;
-  text-align: center;
 }
 
 h1 {
@@ -45,13 +35,26 @@ p {
   gap: 20px;
 }
 
-.consulta-button, .github-button {
+button {
   padding: 10px 20px;
   font-size: 1rem;
   cursor: pointer;
   border: none;
   border-radius: 5px;
   transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #444;
+}
+
+.github-button {
+  background-color: #333;
+  color: white;
+}
+
+.github-button:hover {
+  background-color: #555;
 }
 
 .consulta-button {
@@ -63,11 +66,16 @@ p {
   background-color: #45a049;
 }
 
-.github-button {
-  background-color: #333;
-  color: white;
+.icon {
+  margin-right: 8px; /* Espacio entre el ícono y el texto */
 }
 
-.github-button:hover {
-  background-color: #555;
+
+/* Otros estilos */
+
+.github-button i {
+  font-size: 1.5em;
+  margin-right: 10px;
+  color: #fff;  /* Asegúrate de que el color sea visible, por ejemplo, blanco */
 }
+
