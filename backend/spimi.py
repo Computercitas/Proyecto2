@@ -188,8 +188,8 @@ class SPIMI:
             'results': results
         }
 # Uso
-spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
+#spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
 # Busqueda
-query = 'love'
-result = spimi.busqueda_topK(query, k=5)
-print(result)
+#query = 'love'
+#result = spimi.busqueda_topK(query, k=5)
+#print(result)

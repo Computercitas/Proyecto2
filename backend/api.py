@@ -17,16 +17,5 @@ def search_get():
     results = spimi.busqueda_topK(query, k)
     return jsonify(results)
 
-@app.route('/search', methods=['POST'])
-def search_post():
-    data = request.get_json()
-    if not data or 'query' not in data:
-        return jsonify({'error': 'Query parameter is required'}), 400
-
-    query = data['query']
-    k = data.get('k', 5)
-    results = spimi.busqueda_topK(query, k)
-    return jsonify(results)
-
 if __name__ == '__main__':
     app.run(debug=True)
