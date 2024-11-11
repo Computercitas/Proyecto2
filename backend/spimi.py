@@ -11,6 +11,7 @@ import json
 import heapq
 import time
 from langdetect import detect
+import sys
 
 
 nltk.download('punkt')
@@ -42,14 +43,18 @@ class SPIMI:
         self.cargarIndice()
 
     def cargarDatos(self, path):
-        return pd.read_csv(path)
+        data = pd.read_csv(path)
+        if 'lyrics' not in data.columns:
+            raise ValueError("El archivo CSV debe contener una columna llamada 'lyrics'")
+        return data
+
 
     def eliminarIdx_n(self):
         for bloque_file in os.listdir(self.pathTemp):
             os.remove(os.path.join(self.pathTemp, bloque_file))
         os.rmdir(self.pathTemp)
 
-    def preProceasmiento(self, texto):
+    def preProcesamiento(self, texto):
         if isinstance(texto, float):
             return [] 
         texto = re.sub(r'[^\x00-\x7F]+', '', texto) 
@@ -65,26 +70,28 @@ class SPIMI:
             mormas = defaultdict(float)
 
             for doc_id, texto in enumerate(bloque):
-                tokens = self.preProceasmiento(texto)
+                tokens = self.preProcesamiento(texto)
                 term_freq = Counter(tokens)
 
                 for term, freq in term_freq.items():
                     diccionario[term].append([i + doc_id, freq])
                     mormas[str(i + doc_id)] += freq ** 2
 
+            # Verificar el tamaño del bloque antes de guardarlo
             bloque_data = {
                 'diccionario': dict(diccionario),
                 'mormas': dict(mormas)
             }
-
-            bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
-            with open(bloque_path, 'w', encoding='utf-8') as f:
-                json.dump(bloque_data, f, ensure_ascii=False)
+            if sys.getsizeof(bloque_data) <= 4 * 1024 * 1024:  # 4 MB en bytes
+                bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
+                with open(bloque_path, 'w', encoding='utf-8') as f:
+                    json.dump(bloque_data, f, ensure_ascii=False)
+            else:
+                print(f"El bloque {bloqeuID} excede el tamaño límite de 4 MB.")
 
     def merge(self):
         bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
-        heap = []
-        term_postings = defaultdict(list)
+        term_files = {}  # Solo almacena las rutas de los archivos, no los archivos abiertos
         mormas = defaultdict(float)
 
         for bloque_file in bloque_files:
@@ -92,17 +99,23 @@ class SPIMI:
                 bloque_data = json.load(f)
                 diccionario = bloque_data['diccionario']
                 bloque_mormas = bloque_data['mormas']
-                
-                for term, postings in diccionario.items():
-                    for posting in postings:
-                        heapq.heappush(heap, (term, tuple(posting))) 
-                
-                for doc_id, norm in bloque_mormas.items():
-                    mormas[int(doc_id)] += norm
 
-        while heap:
-            term, posting = heapq.heappop(heap)
-            term_postings[term].append(list(posting))
+                for term, postings in diccionario.items():
+                    if term not in term_files:
+                        # Guarda solo el nombre del archivo en term_files, no el archivo abierto.
+                        term_files[term] = os.path.join(self.pathTemp, f'{term}.tmp')
+                    with open(term_files[term], 'a', encoding='utf-8') as term_file:
+                        for posting in postings:
+                            term_file.write(f"{posting[0]}:{posting[1]}\n")
+
+            for doc_id, norm in bloque_mormas.items():
+                mormas[int(doc_id)] += norm
+
+        term_postings = defaultdict(list)
+        for term, file_path in term_files.items():
+            with open(file_path, 'r', encoding='utf-8') as f:
+                postings = [line.strip().split(':') for line in f]
+                term_postings[term] = [[int(doc_id), int(freq)] for doc_id, freq in postings]
 
         mormas = {int(doc_id): np.sqrt(norm) for doc_id, norm in mormas.items()}
 
@@ -110,9 +123,13 @@ class SPIMI:
             'diccionario': dict(term_postings),
             'mormas': mormas
         }
-        
         with open(self.indexF, 'w', encoding='utf-8') as f:
             json.dump(final_index, f, ensure_ascii=False)
+
+        # Elimina los archivos temporales después de usarlos
+        for term_file in term_files.values():
+            os.remove(term_file)
+
 
     def cargarIndice(self):
         with open(self.indexF, 'r', encoding='utf-8') as f:
@@ -134,7 +151,7 @@ class SPIMI:
         return tfidf
 
     def similitudCoseno(self, query):
-        query_tokens = self.preProceasmiento(query)
+        query_tokens = self.preProcesamiento(query)
         query_vector = Counter(query_tokens)
 
         query_tfidf_vector = {}
@@ -188,7 +205,7 @@ class SPIMI:
             'results': results
         }
 # Uso
-#spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
+spimi = SPIMI(csv_path='spotify_songs.csv')
 # Busqueda
 #query = 'love'
 #result = spimi.busqueda_topK(query, k=5)
