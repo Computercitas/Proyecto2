@@ -77,7 +77,6 @@ class SPIMI:
                     diccionario[term].append([i + doc_id, freq])
                     mormas[str(i + doc_id)] += freq ** 2
 
-            # Verificar el tamaño del bloque antes de guardarlo
             bloque_data = {
                 'diccionario': dict(diccionario),
                 'mormas': dict(mormas)
@@ -91,7 +90,7 @@ class SPIMI:
 
     def merge(self):
         bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
-        term_files = {}  # Solo almacena las rutas de los archivos, no los archivos abiertos
+        term_files = {}
         mormas = defaultdict(float)
 
         for bloque_file in bloque_files:
@@ -102,7 +101,6 @@ class SPIMI:
 
                 for term, postings in diccionario.items():
                     if term not in term_files:
-                        # Guarda solo el nombre del archivo en term_files, no el archivo abierto.
                         term_files[term] = os.path.join(self.pathTemp, f'{term}.tmp')
                     with open(term_files[term], 'a', encoding='utf-8') as term_file:
                         for posting in postings:
@@ -125,8 +123,7 @@ class SPIMI:
         }
         with open(self.indexF, 'w', encoding='utf-8') as f:
             json.dump(final_index, f, ensure_ascii=False)
-
-        # Elimina los archivos temporales después de usarlos
+            
         for term_file in term_files.values():
             os.remove(term_file)
 
