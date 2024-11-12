@@ -125,13 +125,10 @@ const Consulta: React.FC = () => {
                     <td>
                         <button onClick={() => handleViewDetails(result)}>ver</button>
                     </td>
-                    <td>{result.track_id.substring(0, 10)}</td>
+                    <td>{`${result.track_id.substring(0, 10)}...`}</td>
                     <td>{result.track_name.length > 15 ? `${result.track_name.substring(0, 15)}...` : result.track_name}</td>
                     <td>{result.track_artist.length > 15 ? `${result.track_artist.substring(0, 15)}...` : result.track_artist}</td>
-                    <td>
-                        {result.lyrics.length > 25 
-                        ? `${result.lyrics.substring(0, 25)}...` 
-                        : result.lyrics}
+                        <td> {result.lyrics.length > 25 ? `${result.lyrics.substring(0, 25)}...` : result.lyrics}
                     </td>
                     <td>{result.row_position}</td>
                     <td>{result.similitudCoseno.toFixed(2)}</td>
