@@ -21,7 +21,7 @@ class SPIMI:
     def __init__(self, csv_path, bloqueTamano=5000, pathTemp='indice', indexF='indexFinal.json'):
         self.data = self.cargarDatos(csv_path)
         self.letra = self.data['lyrics'].fillna('').tolist()
-        self.metaData = self.data[['track_name', 'track_artist', 'track_album_name']].to_dict('records')
+        self.metaData = self.data[['track_id', 'track_name', 'track_artist', 'lyrics', 'track_album_name']].to_dict('records')
         self.bloqueTamano = bloqueTamano
         self.pathTemp = pathTemp
         self.indexF = indexF
@@ -186,7 +186,10 @@ class SPIMI:
         for doc_id, score in top_k_results:
             metadata = self.metaData[doc_id]
             result = {
+                'track_id': metadata['track_id'],
                 'track_name': metadata['track_name'],
+                'track_artist': metadata['track_artist'],
+                'lyrics': metadata['lyrics'][:25] + "...",
                 'row_position': doc_id+2,
                 'similitudCoseno': score
             }
