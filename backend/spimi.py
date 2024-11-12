@@ -133,18 +133,18 @@ class SPIMI:
             data = json.load(f)
             self.diccionario = defaultdict(list, data['diccionario'])
             self.normas = {int(k): v for k, v in data['normas'].items()}
-
+            
     def calcularTFIDF(self, term, doc_id):
         if term in self.tfidf_cache and doc_id in self.tfidf_cache[term]:
             return self.tfidf_cache[term][doc_id]
 
         term_postings = self.diccionario.get(term, [])
         doc_freq = len(term_postings)
-        tf = next((freq for doc, freq in term_postings if doc == doc_id), 0)
+        raw_tf = next((freq for doc, freq in term_postings if doc == doc_id), 0)
+        tf = 1 + np.log(raw_tf) if raw_tf > 0 else 0
         idf = np.log(self.num_docs / (1 + doc_freq))
         tfidf = tf * idf
-
-        self.tfidf_cache[term][doc_id] = tfidf
+        self.tfidf_cache.setdefault(term, {})[doc_id] = tfidf
         return tfidf
 
     def similitudCoseno(self, query):
