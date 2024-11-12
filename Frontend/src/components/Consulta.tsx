@@ -2,7 +2,10 @@ import React, { useState } from "react";
 
 // Define la interfaz para un resultado de consulta
 interface QueryResult {
+  track_id: string;
   track_name: string;
+  track_artist: string;
+  lyrics: string;
   row_position: number;
   similitudCoseno: number;
 }
@@ -78,7 +81,7 @@ const Consulta: React.FC = () => {
           value={topK}
           onChange={handleTopKChange}
           min={1}
-          max={100}
+          max={1000}
         />
       </div>
 
@@ -97,14 +100,31 @@ const Consulta: React.FC = () => {
       {results.length > 0 && (
         <div className="results">
           <h3>Resultados</h3>
-          <ul>
-            {results.map((result, index) => (
-              <li key={index}>
-                <strong>{result.track_name}</strong> - Posición: {result.row_position} - Similitud: {result.similitudCoseno}
-              </li>
-            ))}
-          </ul>
-          <p>Tiempo de consulta: {queryTime.toFixed(2)} milisegundos</p>
+          <p>Tiempo de consulta: {queryTime.toFixed(2)} milisegundos</p>          
+          <table>
+            <thead>
+              <tr>
+                <th>Track ID</th>
+                <th>Track Name</th>
+                <th>Track Artist</th>
+                <th>Lyrics</th>
+                <th>Posición</th>
+                <th>Similitud Coseno</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((result, index) => (
+                <tr key={index}>
+                  <td>{result.track_id}</td>
+                  <td>{result.track_name}</td>
+                  <td>{result.track_artist}</td>
+                  <td>{result.lyrics}</td>
+                  <td>{result.row_position}</td>
+                  <td>{result.similitudCoseno}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

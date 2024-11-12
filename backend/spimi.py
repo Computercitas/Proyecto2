@@ -31,7 +31,7 @@ class SPIMI:
         self.tfidf_cache = defaultdict(dict)
 
         self.diccionario = defaultdict(list)
-        self.mormas = defaultdict(float)
+        self.normas = defaultdict(float)
 
         if not os.path.exists(self.pathTemp):
             os.makedirs(self.pathTemp)
@@ -67,7 +67,7 @@ class SPIMI:
         for bloqeuID, i in enumerate(range(0, len(self.letra), self.bloqueTamano)):
             bloque = self.letra[i:i + self.bloqueTamano]
             diccionario = defaultdict(list)
-            mormas = defaultdict(float)
+            normas = defaultdict(float)
 
             for doc_id, texto in enumerate(bloque):
                 tokens = self.preProcesamiento(texto)
@@ -75,11 +75,11 @@ class SPIMI:
 
                 for term, freq in term_freq.items():
                     diccionario[term].append([i + doc_id, freq])
-                    mormas[str(i + doc_id)] += freq ** 2
+                    normas[str(i + doc_id)] += freq ** 2
 
             bloque_data = {
                 'diccionario': dict(diccionario),
-                'mormas': dict(mormas)
+                'normas': dict(normas)
             }
             if sys.getsizeof(bloque_data) <= 4 * 1024 * 1024:  # 4 MB en bytes
                 bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
@@ -91,13 +91,13 @@ class SPIMI:
     def merge(self):
         bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
         term_files = {}
-        mormas = defaultdict(float)
+        normas = defaultdict(float)
 
         for bloque_file in bloque_files:
             with open(bloque_file, 'r', encoding='utf-8') as f:
                 bloque_data = json.load(f)
                 diccionario = bloque_data['diccionario']
-                bloque_mormas = bloque_data['mormas']
+                bloque_normas = bloque_data['normas']
 
                 for term, postings in diccionario.items():
                     if term not in term_files:
@@ -106,8 +106,8 @@ class SPIMI:
                         for posting in postings:
                             term_file.write(f"{posting[0]}:{posting[1]}\n")
 
-            for doc_id, norm in bloque_mormas.items():
-                mormas[int(doc_id)] += norm
+            for doc_id, norm in bloque_normas.items():
+                normas[int(doc_id)] += norm
 
         term_postings = defaultdict(list)
         for term, file_path in term_files.items():
@@ -115,11 +115,11 @@ class SPIMI:
                 postings = [line.strip().split(':') for line in f]
                 term_postings[term] = [[int(doc_id), int(freq)] for doc_id, freq in postings]
 
-        mormas = {int(doc_id): np.sqrt(norm) for doc_id, norm in mormas.items()}
+        normas = {int(doc_id): np.sqrt(norm) for doc_id, norm in normas.items()}
 
         final_index = {
             'diccionario': dict(term_postings),
-            'mormas': mormas
+            'normas': normas
         }
         with open(self.indexF, 'w', encoding='utf-8') as f:
             json.dump(final_index, f, ensure_ascii=False)
@@ -132,7 +132,7 @@ class SPIMI:
         with open(self.indexF, 'r', encoding='utf-8') as f:
             data = json.load(f)
             self.diccionario = defaultdict(list, data['diccionario'])
-            self.mormas = {int(k): v for k, v in data['mormas'].items()}
+            self.normas = {int(k): v for k, v in data['normas'].items()}
 
     def calcularTFIDF(self, term, doc_id):
         if term in self.tfidf_cache and doc_id in self.tfidf_cache[term]:
@@ -168,7 +168,7 @@ class SPIMI:
             query_tfidf /= query_norm
             if term in self.diccionario:
                 for doc_id, freq in self.diccionario[term]:
-                    doc_tfidf = self.calcularTFIDF(term, doc_id) / self.mormas[doc_id]
+                    doc_tfidf = self.calcularTFIDF(term, doc_id) / self.normas[doc_id]
                     scores[doc_id] += query_tfidf * doc_tfidf
 
         return scores

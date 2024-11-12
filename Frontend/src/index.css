@@ -30,6 +30,7 @@ body {
   background-color: #333; /* Fondo oscuro para el contenedor */
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  margin: auto;
 }
 
 h1 {
@@ -50,8 +51,11 @@ p {
 }
 
 button {
-  padding: 10px 20px;
-  font-size: 1rem;
+  margin: 10px 0;
+  padding: 8px;
+  font-size: 14px;
+  /*padding: 10px 20px;*/
+  /*font-size: 1rem;*/
   cursor: pointer;
   border: none;
   border-radius: 5px;
@@ -161,9 +165,11 @@ button:hover {
   color: white;
   font-size: 1.1rem;
   width: 100%;
+  max-height: 400px; /* Ajusta la altura según lo que necesitamos*/
   display: flex;
   flex-direction: column; /* Asegura que los resultados estén en columna */
   align-items: flex-start; /* Alinea los elementos de la lista a la izquierda */
+  overflow-y: auto; /* Permite el desplazamiento vertical */
 }
 
 ul {
@@ -176,4 +182,9 @@ li {
   margin-bottom: 10px;
   border-bottom: 1px solid #444; /* Para separar los resultados con una línea */
   padding-bottom: 10px;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
 }
