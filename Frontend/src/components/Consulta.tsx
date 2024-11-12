@@ -1,4 +1,6 @@
+// Consulta.tsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 // Define la interfaz para un resultado de consulta
 interface QueryResult {
@@ -17,6 +19,7 @@ const Consulta: React.FC = () => {
   const [results, setResults] = useState<QueryResult[]>([]);
   const [queryTime, setQueryTime] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
@@ -37,27 +40,30 @@ const Consulta: React.FC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query, k:topK }), // Enviar datos como JSON
+        body: JSON.stringify({ query, k: topK }),
       });
 
       if (!response.ok) {
         const errorMessage = await response.text();
         throw new Error(`Error en la consulta: ${errorMessage}`);
-
       }
 
       const data = await response.json();
       setResults(data.results);
       setQueryTime(data.query_time * 1000); // Convertir a milisegundos si es necesario
-      setError(null); // Limpiar el error si la consulta es exitosa
+      setError(null);
     } catch (error: unknown) {
       console.error("Error al realizar la consulta:", error);
       if (error instanceof Error) {
-        setError(error.message); // Solo accedemos a `message` si `error` es una instancia de `Error`
+        setError(error.message);
       } else {
         setError("Hubo un problema con la consulta. Inténtalo de nuevo.");
       }
     }
+  };
+
+  const handleViewDetails = (result: QueryResult) => {
+    navigate(`/details/${result.track_id}`, { state: { result } });
   };
 
   return (
@@ -100,10 +106,11 @@ const Consulta: React.FC = () => {
       {results.length > 0 && (
         <div className="results">
           <h3>Resultados</h3>
-          <p>Tiempo de consulta: {queryTime.toFixed(2)} milisegundos</p>          
+          <p>Tiempo de consulta: {queryTime.toFixed(2)} milisegundos</p>
           <table>
             <thead>
               <tr>
+                <th></th>
                 <th>Track ID</th>
                 <th>Track Name</th>
                 <th>Track Artist</th>
@@ -113,16 +120,23 @@ const Consulta: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {results.map((result, index) => (
+            {results.map((result, index) => (
                 <tr key={index}>
-                  <td>{result.track_id}</td>
-                  <td>{result.track_name}</td>
-                  <td>{result.track_artist}</td>
-                  <td>{result.lyrics}</td>
-                  <td>{result.row_position}</td>
-                  <td>{result.similitudCoseno}</td>
+                    <td>
+                        <button onClick={() => handleViewDetails(result)}>ver</button>
+                    </td>
+                    <td>{result.track_id.substring(0, 10)}</td>
+                    <td>{result.track_name.length > 15 ? `${result.track_name.substring(0, 15)}...` : result.track_name}</td>
+                    <td>{result.track_artist.length > 15 ? `${result.track_artist.substring(0, 15)}...` : result.track_artist}</td>
+                    <td>
+                        {result.lyrics.length > 25 
+                        ? `${result.lyrics.substring(0, 25)}...` 
+                        : result.lyrics}
+                    </td>
+                    <td>{result.row_position}</td>
+                    <td>{result.similitudCoseno.toFixed(2)}</td>
                 </tr>
-              ))}
+            ))}
             </tbody>
           </table>
         </div>
