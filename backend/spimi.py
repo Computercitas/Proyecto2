@@ -14,7 +14,7 @@ from langdetect import detect
 import sys
 
 
-nltk.download('punkt')
+nltk.download('punkt_tab')
 nltk.download('stopwords')
 
 class SPIMI:
@@ -202,7 +202,7 @@ class SPIMI:
             'results': results
         }
 # Uso
-spimi = SPIMI(csv_path='spotify_songs.csv')
+#spimi = SPIMI(csv_path='spotify_songs.csv')
 # Busqueda
 #query = 'love'
 #result = spimi.busqueda_topK(query, k=5)
