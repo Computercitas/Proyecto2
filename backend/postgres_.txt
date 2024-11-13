@@ -1,0 +1,5 @@
+
+docker run -e POSTGRES_USER=edd -e POSTGRES_PASSWORD=PlatoN03 -e POSTGRES_DB=edd_db -p 5432:5432 -d postgres
+
+
+
