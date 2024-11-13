@@ -10,11 +10,11 @@
 
 ## Introducción
 
-## Objetivo
+### Objetivo
 
 Desarrollar y aplicar algoritmos de recuperación de información utilizando índices invertidos en memoria secundaria, que permitan realizar consultas textuales y obtener las canciones más relevantes en función de la coincidencia con la consulta.
 
-## Dataset
+### Dominio de datos
 
 Utilizamos un dataset que contiene `18454` canciones de Spotify, retirado desde Kaggle: [dataset](https://www.kaggle.com/datasets/imuhammad/audio-features-and-lyrics-of-spotify-songs/data).
 
@@ -27,6 +27,10 @@ El archivo `spotify_songs.csv` contiene 25 columnas, de las cuales utilizamos lo
 - `track_album_name`: Álbum al que la canción pertenece.
 
 Dado que las consultas están orientadas a la búsqueda textual por similitud, consideramos que los demás atributos, como popularidad, género, tono, entre otros, no son especialmente relevantes para este tipo de aplicación.
+
+### Importancia de la indexación
+
+En este dominio de datos, la indexación es fundamental para optimizar la eficiencia de las consultas. Podemos considerar cada fila del archivo como un documento, ya que tiene cientos de palabras que constituyen la letra de una canción, las cuales deben ser indexadas. Dado que estamos trabajando con cientos de miles de palabras que se repiten en múltiples documentos, la indexación permite organizar y acceder rápidamente a la información relevante, evitando búsquedas secuenciales costosas y permitiendo recuperar de manera eficiente las coincidencias más relevantes para cada consulta. Sin un buen sistema de indexación, la búsqueda entre este gran volumen de datos sería lenta e ineficiente.
 
 ## Backend
 
