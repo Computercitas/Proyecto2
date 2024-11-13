@@ -51,4 +51,24 @@ Los archivos de API (`api.py`, `api1.py`) exponen endpoints REST para interactua
 
 ## Frontend
 
+Para correr el frontend localmente hacer lo siguiente en la terminal
+- Entrar a la carpeta `Frontend`
+- Correr los comandos `npm i` y `npm run dev`
+- Entrar al link de `localhost` que aparece en la terminal
+
+Utilizamos React con Typescript para hacer el frontend. Tenemos 3 componentes principales: 
+
+`Home.tsx`: Página principal donde podemos ir a la página de consultas o visitar el repositorio del proyecto. Ruta `/`.
+
+![Página home](./imgs/homepage.png)
+
+- `Consulta.tsx`: Página para hacer las consultas. Podemos elegir distintos métodos de indexación y customizar la cantidad de resultados que queremos para nuestra query personalizada. Ruta `/consulta`.
+
+![Página de consultas](./imgs/querypage.png)
+
+- `DetailPage.tsx`: Página para ver los detalles completos de una canción específica. Ruta `/details/trackId`.
+
+![Página details](./imgs/detailspage.png)
+
+
 ## Pruebas Experimentales
