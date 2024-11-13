@@ -10,7 +10,23 @@
 
 ## Introducción
 
-### Objetivo
+## Objetivo
+
+Desarrollar y aplicar algoritmos de recuperación de información utilizando índices invertidos en memoria secundaria, que permitan realizar consultas textuales y obtener las canciones más relevantes en función de la coincidencia con la consulta.
+
+## Dataset
+
+Utilizamos un dataset que contiene `18454` canciones de Spotify, retirado desde Kaggle: [dataset](https://www.kaggle.com/datasets/imuhammad/audio-features-and-lyrics-of-spotify-songs/data).
+
+El archivo `spotify_songs.csv` contiene 25 columnas, de las cuales utilizamos los siguientes 5: 
+
+- `track_id`: Identificador de la canción en spotify.
+- `track_name`: Nombre de la canción.
+- `track_artist`: Artista principal de la canción.
+- `lyrics`: Letra completa de la canción.
+- `track_album_name`: Álbum al que la canción pertenece.
+
+Dado que las consultas están orientadas a la búsqueda textual por similitud, consideramos que los demás atributos, como popularidad, género, tono, entre otros, no son especialmente relevantes para este tipo de aplicación.
 
 ## Backend
 
@@ -90,11 +106,11 @@ Utilizamos React con Typescript para hacer el frontend. Tenemos 3 componentes pr
 
 ![Página home](./imgs/homepage.png)
 
-- `Consulta.tsx`: Página para hacer las consultas. Podemos elegir distintos métodos de indexación y customizar la cantidad de resultados que queremos para nuestra query personalizada. Ruta `/consulta`.
+`Consulta.tsx`: Página para hacer las consultas. Podemos elegir distintos métodos de indexación y customizar la cantidad de resultados que queremos para nuestra query personalizada. Ruta `/consulta`.
 
 ![Página de consultas](./imgs/querypage.png)
 
-- `DetailPage.tsx`: Página para ver los detalles completos de una canción específica. Ruta `/details/trackId`.
+`DetailPage.tsx`: Página para ver los detalles completos de una canción específica. Ruta `/details/trackId`.
 
 ![Página details](./imgs/detailspage.png)
 
