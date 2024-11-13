@@ -52,6 +52,23 @@ El índice invertido final ordenado alfabeticamente es generado en el archivo `i
 Si el archivo de índice ya existe el `SPIMI` solo lo utiliza. No necesita crearlo denuevo.
 
 ## 2. Integración con PostgreSQL
+
+La clase `PostgresConnector` se encarga de manejar la conexión y las operaciones con una base de datos PostgreSQL. Esta clase facilita la carga de datos, la configuración de la base de datos y la realización de búsquedas eficientes utilizando índices GIN y vectores de búsqueda. A continuación, se describen los métodos principales y su uso:
+
+### Métodos Principales
+
+- **`connect`**: Conecta a la base de datos utilizando los parámetros de conexión proporcionados.
+- **`setup_database`**: Configura la base de datos creando el esquema necesario, la tabla `spotify_songs`, el índice GIN para búsquedas de texto completo, la función `update_search_vector` para actualizar el vector de búsqueda y el trigger correspondiente.
+- **`load_data`**: Carga datos desde un archivo CSV a la tabla `spotify_songs`. Antes de cargar los datos, verifica si ya existen datos en la tabla para evitar duplicados.
+- **`search`**: Realiza una búsqueda en la tabla `spotify_songs` utilizando un vector de búsqueda. Devuelve los resultados ordenados por similitud en orden descendente. Los parámetros incluyen:
+  - `query` (str): La consulta de búsqueda.
+  - `k` (int): Número de resultados a devolver (por defecto 5).
+  - Retorna un diccionario con el tiempo de consulta y los resultados.
+- **`search_lyrics`**: Realiza una búsqueda en la tabla `spotify_songs` basada en un fragmento de letras. Devuelve los resultados ordenados por similitud en orden descendente. Los parámetros incluyen:
+  - `lyrics_fragment` (str): Fragmento de letras para buscar.
+  - `k` (int): Número de resultados a devolver (por defecto 5).
+  - Retorna un diccionario con el tiempo de consulta y los resultados.
+
 ## 3. APIs
 
 Los archivos de API (`api.py`, `api1.py`) exponen endpoints REST para interactuar con el backend y facilitar el acceso a los datos de canciones:
