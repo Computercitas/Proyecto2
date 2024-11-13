@@ -12,7 +12,7 @@
 
 ### Objetivo
 
-# Backend
+## Backend
 
 Esta aplicación de backend está diseñada para manejar procesamiento, almacenamiento y recuperación de datos de canciones a gran escala. Incluye:
 
@@ -49,6 +49,6 @@ Los archivos de API (`api.py`, `api1.py`) exponen endpoints REST para interactua
 - **Endpoints Adicionales**: Proporciona funcionalidades de consulta avanzadas, como la búsqueda por fragmento de letra o por atributos específicos de la pista.
 
 
-# Frontend
+## Frontend
 
-# Pruebas Experimentales
+## Pruebas Experimentales
