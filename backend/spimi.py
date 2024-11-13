@@ -12,7 +12,7 @@ import heapq
 import time
 from langdetect import detect
 import sys
-from bisect import bisect_left #búsqueda binaria
+from bisect import bisect_left
 
 nltk.download('punkt_tab')
 nltk.download('stopwords')
@@ -81,7 +81,7 @@ class SPIMI:
                 'diccionario': dict(diccionario),
                 'normas': dict(normas)
             }
-            if sys.getsizeof(bloque_data) <= 4 * 1024 * 1024:  # 4 MB en bytes
+            if sys.getsizeof(bloque_data) <= 4 * 1024 * 1024:
                 bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
                 with open(bloque_path, 'w', encoding='utf-8') as f:
                     json.dump(bloque_data, f, ensure_ascii=False)
@@ -116,18 +116,16 @@ class SPIMI:
                 term_postings[term] = [[int(doc_id), int(freq)] for doc_id, freq in postings]
 
         normas = {int(doc_id): np.sqrt(norm) for doc_id, norm in normas.items()}
-
-        #ordenar índices por orden alfabetico de las palabras
         sorted_term_postings = sorted(dict(term_postings).items(), key=lambda item: item[0])
         
-        final_index = { #concatenar todo en un mismo archivo 
-            'diccionario': sorted_term_postings, #diccionario con el índice invertido
-            'normas': normas #diccionario de normas
+        final_index = {
+            'diccionario': sorted_term_postings,
+            'normas': normas
         }
-        with open(self.indexF, 'w', encoding='utf-8') as f: #guardar en memoria secundaria
+        with open(self.indexF, 'w', encoding='utf-8') as f:
             json.dump(final_index, f, ensure_ascii=False)
             
-        for term_file in term_files.values(): #remover archivos temporales
+        for term_file in term_files.values():
             os.remove(term_file)
 
 
@@ -143,14 +141,14 @@ class SPIMI:
 
         term_postings = self.diccionario.get(term, [])
         doc_freq = len(term_postings)
-        tf = next((freq for doc, freq in term_postings if doc == doc_id), 0)
+        raw_tf = next((freq for doc, freq in term_postings if doc == doc_id), 0)
+        tf = 1 + np.log(raw_tf) if raw_tf > 0 else 0
         idf = np.log(self.num_docs / (1 + doc_freq))
         tfidf = tf * idf
-
-        self.tfidf_cache[term][doc_id] = tfidf
+        self.tfidf_cache.setdefault(term, {})[doc_id] = tfidf
         return tfidf
 
-    def binary_search(self, term): #busqueda binaria en el índice invertido ordenado
+    def binary_search(self, term):
         keys_list = list(self.diccionario.keys())
         i = bisect_left(keys_list, term)
         if i != len(keys_list) and keys_list[i] == term:
@@ -160,27 +158,28 @@ class SPIMI:
     def similitudCoseno(self, query):
         query_tokens = self.preProcesamiento(query)
         query_vector = Counter(query_tokens)
-
         query_tfidf_vector = {}
         query_norm = 0.0
         for term, count in query_vector.items():
             if term in self.diccionario:
                 idf = np.log(self.num_docs / (1 + len(self.diccionario[term])))
-                query_tfidf = count * idf
+                query_tfidf = (1 + np.log(count)) * idf
                 query_tfidf_vector[term] = query_tfidf
                 query_norm += query_tfidf ** 2
 
         query_norm = np.sqrt(query_norm) or 1.0
-
         scores = defaultdict(float)
-
         for term, query_tfidf in query_tfidf_vector.items():
-            query_tfidf /= query_norm
-            if self.binary_search(term) != None: # en vez de iterar linealmente con if term *in* self.diccionario
+            normalized_query_tfidf = query_tfidf / query_norm
+            if term in self.diccionario:
                 for doc_id, freq in self.diccionario[term]:
-                    doc_tfidf = self.calcularTFIDF(term, doc_id) / self.normas[doc_id]
-                    scores[doc_id] += query_tfidf * doc_tfidf
-                    
+                    if self.normas[doc_id] != 0:
+                        doc_tfidf = self.calcularTFIDF(term, doc_id) / self.normas[doc_id]
+                        scores[doc_id] += normalized_query_tfidf * doc_tfidf
+
+        for doc_id in scores:
+            scores[doc_id] /= (self.normas[doc_id] or 1.0)
+
         return scores
 
     def busqueda_topK(self, query, k=5, additional_features=None):
@@ -215,8 +214,8 @@ class SPIMI:
             'results': results
         }
 # Uso
-spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
+#spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
 # Busqueda
-query = 'hello'
-result = spimi.busqueda_topK(query, k=5)
-print(result)
+#query = 'hello'
+#result = spimi.busqueda_topK(query, k=5)
+#print(result)
