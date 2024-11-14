@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)  # Permitir CORS para solicitudes desde cualquier origen
 
 # Inicializa el índice SPIMI
-path = '../data/spotify_songs.csv'
+path = './backend/data/spotify_songs.csv'
 spimi = SPIMI(csv_path=path)
 
 # Inicializar PostgreSQL
@@ -20,11 +20,12 @@ db = PostgresConnector()
 db.setup_database()
 
 # Endpoints para SPIMI
-@app.route('/search/spimi', methods=['GET'])
+@app.route('/search/spimi', methods=['POST'])
 def search_spimi():
     try:
-        query = request.args.get('query')
-        k = int(request.args.get('k', 5))
+        data = request.get_json()
+        query = data.get('query')
+        k = int(data.get('k', 5))
 
         if not query:
             return jsonify({'error': 'Query parameter is required'}), 400
@@ -36,11 +37,12 @@ def search_spimi():
         return jsonify({'error': str(e)}), 500
 
 # Endpoints para PostgreSQL
-@app.route('/search/postgres', methods=['GET'])
+@app.route('/search/postgres', methods=['POST'])
 def search_postgres():
     try:
-        query = request.args.get('query')
-        k = int(request.args.get('k', 5))
+        data = request.get_json()
+        query = data.get('query')
+        k = int(data.get('k', 5))
 
         if not query:
             return jsonify({'error': 'Query parameter is required'}), 400
@@ -51,11 +53,12 @@ def search_postgres():
         logger.error(f"Error en búsqueda PostgreSQL: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/search/postgres/lyrics', methods=['GET'])
+@app.route('/search/postgres/lyrics', methods=['POST'])
 def search_postgres_lyrics():
     try:
-        lyrics = request.args.get('lyrics')
-        k = int(request.args.get('k', 5))
+        data = request.get_json()
+        lyrics = data.get('lyrics')
+        k = int(data.get('k', 5))
 
         if not lyrics:
             return jsonify({'error': 'Lyrics parameter is required'}), 400

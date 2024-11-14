@@ -6,11 +6,11 @@ import time
 class PostgresConnector:
     def __init__(self):
         self.connection_params = {
-            "user": "edd",
-            "password": "PlatoN03",
+            "user": "postgres",
+            "password": "Ut3c-4536",
             "host": "localhost",
-            "port": "5432",
-            "database": "edd_db"
+            "port": "5433",
+            "database": "ProyectoFinalBD2"
         }
         self.connect()
         
