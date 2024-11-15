@@ -2,11 +2,11 @@
 
 ### Autores
 
-- [Mariel Carolina Tovar Tolentino](https://github.com/MarielUTEC)  
-- [Noemi Alejandra Huarino Anchillo](https://github.com/NoemiHuarino-utec)  
-- [Sergio Sebastian Sotil Lozada](https://github.com/Sergio-So)  
-- [Davi Magalhaes Eler](https://github.com/CS-DaviMagalhaes)  
-- [Jose Eddison Pinedo Espinoza](https://github.com/EddisonPinedoEsp) 
+- [Mariel Carolina Tovar Tolentino](https://github.com/MarielUTEC)
+- [Noemi Alejandra Huarino Anchillo](https://github.com/NoemiHuarino-utec)
+- [Sergio Sebastian Sotil Lozada](https://github.com/Sergio-So)
+- [Davi Magalhaes Eler](https://github.com/CS-DaviMagalhaes)
+- [Jose Eddison Pinedo Espinoza](https://github.com/EddisonPinedoEsp)
 
 ## Introducción
 
@@ -18,7 +18,7 @@ Desarrollar y aplicar algoritmos de recuperación de información utilizando ín
 
 Utilizamos un dataset que contiene `18454` canciones de Spotify, retirado desde Kaggle: [dataset](https://www.kaggle.com/datasets/imuhammad/audio-features-and-lyrics-of-spotify-songs/data).
 
-El archivo `spotify_songs.csv` contiene 25 columnas, de las cuales utilizamos los siguientes 5: 
+El archivo `spotify_songs.csv` contiene 25 columnas, de las cuales utilizamos los siguientes 5:
 
 - `track_id`: Identificador de la canción en spotify.
 - `track_name`: Nombre de la canción.
@@ -66,6 +66,7 @@ El índice invertido final ordenado alfabeticamente es generado en el archivo `i
 ```
 {"diccionario": [["aconstumbr", [[1, 1], [10, 5]]], ["blood", [[3, 4], [7, 1]]], ... ], "normas": {"0": 4.723972227312666, "1": 2.9813075013013317, ... }}
 ```
+
 - El token `"acostumbr"` ya fue preprocesado. En el primer documento aparece 1 vez, en el documento de id 10 aparece 5 veces. Como es el primer término su índice de norma seria `"0"`, con valor `4.723972227312666`.
 - El token `"blood"` ya fue preprocesado. En el tercer documento aparece 4 veces, en el séptimo documento aparece 1 vez. Es el segundo término, su índice de norma es `"1"` con valor `2.9813075013013317`.
 
@@ -93,18 +94,18 @@ La clase `PostgresConnector` se encarga de manejar la conexión y las operacione
 
 Los archivos de API (`api.py`, `api1.py`) exponen endpoints REST para interactuar con el backend y facilitar el acceso a los datos de canciones:
 
-- **Endpoint de Búsqueda**: Este endpoint acepta un parámetro de consulta, que permite buscar en la base de datos de canciones y recuperar los mejores resultados en función de la similitud. 
+- **Endpoint de Búsqueda**: Este endpoint acepta un parámetro de consulta, que permite buscar en la base de datos de canciones y recuperar los mejores resultados en función de la similitud.
 - **Endpoints Adicionales**: Proporciona funcionalidades de consulta avanzadas, como la búsqueda por fragmento de letra o por atributos específicos de la pista.
-
 
 ## Frontend
 
 Para correr el frontend localmente hacer lo siguiente en la terminal
+
 - Entrar a la carpeta `Frontend`
 - Correr los comandos `npm i` y `npm run dev`
 - Entrar al link de `localhost` que aparece en la terminal
 
-Utilizamos React con Typescript para hacer el frontend. Tenemos 3 componentes principales: 
+Utilizamos React, Vite y Typescript para hacer el frontend. Tenemos 3 componentes principales:
 
 `Home.tsx`: Página principal donde podemos ir a la página de consultas o visitar el repositorio del proyecto. Ruta `/`.
 
@@ -112,11 +113,31 @@ Utilizamos React con Typescript para hacer el frontend. Tenemos 3 componentes pr
 
 `Consulta.tsx`: Página para hacer las consultas. Podemos elegir distintos métodos de indexación y customizar la cantidad de resultados que queremos para nuestra query personalizada. Ruta `/consulta`.
 
-![Página de consultas](./imgs/querypage.png)
+![Página de consultas](./imgs/front_consulta.png)
 
-`DetailPage.tsx`: Página para ver los detalles completos de una canción específica. Ruta `/details/trackId`.
+`Detalle.tsx`: Página para ver los detalles completos de una canción específica. Ruta `/detalle/trackId`.
 
 ![Página details](./imgs/detailspage.png)
 
+### Diseño de GUI
+
+Esta aplicación permite que el usuario realice búsquedas de canciones usando dos métodos de indeación: **_SPIMI_** y **_PostgreSQL_**.
+
+#### **_Inputs_**:
+
+1. **Ingresar consulta** ("Enter your query"):
+
+   - En esta sección el usuario puede escribir la palabra o frase a buscar.
+
+2. **Cantidad de resultados** ("Enter the value of k"):
+
+   - Aquí el usuario debe ingresar el número de resultados que quiere que se muestren.
+
+3. **Método de Indexación**:
+
+   - Si el usuario quiere realizar la búsqueda con el método de indexación **_SPIMI_**, debe presionar el botón que dice **SPIMI**.
+   - Si el usuario quiere realizar la búsqueda con el método de indexación **_PostgreSQL_**, debe presionar el botón que dice **PostgreSQL**.
+
+#### **_Outputs_**:
 
 ## Pruebas Experimentales

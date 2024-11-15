@@ -1,64 +1,165 @@
-.resultados-table {
+/* Estilos generales */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #1f1f1f;
+  color: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+/* Contenedor principal */
+/* Contenedor principal */
+.Consulta {
+  background-color: #5aa266;
+  padding: 40px; /* Aumenta el padding para más espacio interno */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  width: 90%; /* Cambia de 100% a 90% para que sea más ancho */
+  max-width: 800px; /* Aumenta el ancho máximo de 700px a 800px */
+  text-align: center;
+  margin: 20px auto; /* Centra el contenedor con un margen superior */
+}
+
+
+/* Título */
+.Consulta h1 {
+  font-size: 24px;
+  color: #ffffff;
+  margin-bottom: 20px;
+}
+
+/* Input de consulta */
+.Consulta label {
+  font-size: 16px;
+  color: #dddddd;
+  display: block;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.Consulta input[type="text"],
+.Consulta input[type="number"] {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
+  border: 1px solid #444444;
+  background-color: #2d2d2d;
+  color: #ffffff;
+  margin-bottom: 20px;
 }
 
-.resultados-table th {
-  background-color: #f4f4f4;
-  color: black; /* Texto negro en encabezado */
-}
-
-.resultados-table td {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-}
-
-.resultado-row {
-  background-color: black; /* Fondo negro para las filas de resultado */
-  color: white; /* Texto blanco para contraste en las filas de resultado */
-}
-
-.resultados-container {
-  overflow-y: scroll;
-  max-height: 400px;
-  margin-top: 20px;
-}
-
-.lyrics-cell {
-  max-height: 100px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.detalle-cancion {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: black;
-  color: white;
-  padding: 20px;
-  border: 2px solid #ddd;
-  box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-}
-
-.detalle-cancion button {
-  margin-top: 10px;
-}
-
-.lyrics-scroll {
-  max-height: 200px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
+/* Contenedor de botones */
 .botones-container {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin-top: 15px;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+button {
+  background-color: #f6f6f6;
+  color: rgb(31, 29, 29);
+  font-size: 16px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #dade7d;
+}
+
+button:focus {
+  outline: none;
+}
+
+/* Tabla de resultados */
+.resultados-container {
+  margin-top: 30px;
+  overflow-x: auto;
+}
+
+.resultados-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #444;
+  color: #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.resultados-table th,
+.resultados-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #555;
+}
+
+.resultados-table th {
+  background-color: #555;
+}
+
+.resultados-table tr:nth-child(even) {
+  background-color: #3b3b3b;
+}
+
+.resultados-table tr:hover {
+  background-color: #505050;
+}
+
+.resultados-table button {
+  background-color: #3b82f6;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.resultados-table button:hover {
+  background-color: #2563eb;
+}
+
+/* Detalle de la canción */
+.detalle-cancion {
+  background-color: #444444;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  text-align: left;
+  color: #f0f0f0;
+}
+
+.detalle-cancion h2 {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.detalle-cancion p {
+  margin: 8px 0;
+}
+
+.lyrics-scroll {
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: #333;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  color: #dddddd;
+}
+
+/* Mensaje de no resultados */
+#resultados p {
+  font-size: 18px;
+  color: #cccccc;
+  margin-top: 20px;
 }

@@ -72,7 +72,7 @@ const Consulta: React.FC = () => {
 
   return (
     <div className="Consulta">
-      <h1>¡Realiza tu consulta!</h1>
+      <h1>¡Make your enquiry!</h1>
       <div>
         <label htmlFor="query">Enter your query:</label>
         <input
@@ -99,7 +99,7 @@ const Consulta: React.FC = () => {
 
       <div id="resultados">
         {searchExecuted && resultados.length === 0 && (
-          <p>No se encontraron resultados.</p>
+          <p>No results found.</p>
         )}
         {resultados.length > 0 && (
           <div className="resultados-container">
@@ -111,7 +111,7 @@ const Consulta: React.FC = () => {
                   <th>Lyrics</th>
                   <th>Similitud</th>
                   <th>Row Position</th>
-                  <th>Acciones</th>
+                  <th>Detail</th>
                 </tr>
               </thead>
               <tbody>
