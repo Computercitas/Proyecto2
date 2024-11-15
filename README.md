@@ -2,11 +2,13 @@
 
 ### Autores
 
-- [Mariel Carolina Tovar Tolentino](https://github.com/MarielUTEC)
-- [Noemi Alejandra Huarino Anchillo](https://github.com/NoemiHuarino-utec)
-- [Sergio Sebastian Sotil Lozada](https://github.com/Sergio-So)
-- [Davi Magalhaes Eler](https://github.com/CS-DaviMagalhaes)
-- [Jose Eddison Pinedo Espinoza](https://github.com/EddisonPinedoEsp)
+| Foto                                                                        | Nombre                                                                   | GitHub                                                     |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| ![Mariel](https://github.com/MarielUTEC.png?size=50)                        | [Mariel Carolina Tovar Tolentino](https://github.com/MarielUTEC)         | [@MarielUTEC](https://github.com/MarielUTEC)               |
+| ![Noemi](https://github.com/NoemiHuarino-utec.png?size=50)                  | [Noemi Alejandra Huarino Anchillo](https://github.com/NoemiHuarino-utec) | [@NoemiHuarino-utec](https://github.com/NoemiHuarino-utec) |
+| <img src="https://github.com/Sergio-So.png?size=50" width="50" height="50"> | [Sergio Sebastian Sotil Lozada](https://github.com/Sergio-So)            | [@Sergio-So](https://github.com/Sergio-So)                 |
+| ![Davi](https://github.com/CS-DaviMagalhaes.png?size=50)                    | [Davi Magalhaes Eler](https://github.com/CS-DaviMagalhaes)               | [@CS-DaviMagalhaes](https://github.com/CS-DaviMagalhaes)   |
+| ![Jose](https://github.com/EddisonPinedoEsp.png?size=50)                    | [Jose Eddison Pinedo Espinoza](https://github.com/EddisonPinedoEsp)      | [@EddisonPinedoEsp](https://github.com/EddisonPinedoEsp)   |
 
 ## Introducción
 
@@ -38,7 +40,7 @@ Esta aplicación de backend está diseñada para manejar procesamiento, almacena
 
 1. **Indexación Invertida Basada en SPIMI** para una recuperación eficiente de texto y cálculo de similitud de coseno.
 2. **Integración con Base de Datos PostgreSQL** para almacenar metadatos de canciones y letras con un índice GIN.
-3. **APIs** para realizar búsquedas y recuperar datos de canciones.
+3. **API** para realizar búsquedas y recuperar datos de canciones.
 
 ## 1. SPIMI (Single-Pass In-Memory Indexing)
 
@@ -90,36 +92,165 @@ La clase `PostgresConnector` se encarga de manejar la conexión y las operacione
   - `k` (int): Número de resultados a devolver (por defecto 5).
   - Retorna un diccionario con el tiempo de consulta y los resultados.
 
-## 3. APIs
+## 3. API
 
-Los archivos de API (`api.py`, `api1.py`) exponen endpoints REST para interactuar con el backend y facilitar el acceso a los datos de canciones:
+El archivo de API `api1.py` contiene el código de una API REST construida con Flask, diseñada para manejar búsquedas utilizando dos métodos de indexación: SPIMI y PostgreSQL. La API recibe consultas de búsqueda de una aplicación cliente, realiza la búsqueda usando uno de los métodos especificados y devuelve los resultados.
 
-- **Endpoint de Búsqueda**: Este endpoint acepta un parámetro de consulta, que permite buscar en la base de datos de canciones y recuperar los mejores resultados en función de la similitud.
-- **Endpoints Adicionales**: Proporciona funcionalidades de consulta avanzadas, como la búsqueda por fragmento de letra o por atributos específicos de la pista.
+#### Descripción General
+
+1. **_Importaciones y Configuración Inicial_**:
+
+   - Se importan los módulos necesarios, incluyendo Flask, CORS para permitir solicitudes desde otros dominios, y `logging` para registro de eventos y errores.
+   - Las clases `SPIMI` y `PostgresConnector` se importan, que contienen las funcionalidades de búsqueda con los métodos SPIMI y PostgreSQL, respectivamente.
+
+2. **_Configuración de Logging_**:
+
+   - Se configura el sistema de logging en nivel `INFO`, lo que permite registrar mensajes importantes y errores en la consola para facilitar la depuración.
+
+3. **_Inicialización de la Aplicación y CORS_**:
+
+   - Se crea una instancia de Flask para la API (`app = Flask(__name__)`) y se habilita CORS para permitir que la API reciba solicitudes de diferentes orígenes.
+
+4. **_Inicialización del Índice SPIMI_**:
+
+   - Se carga el índice SPIMI desde un archivo CSV (`spotify_songs.csv`). Este archivo contiene los datos que serán indexados y buscados utilizando el método SPIMI.
+
+5. **_Inicialización de PostgreSQL_**:
+   - Se inicializa la base de datos PostgreSQL usando el conector `PostgresConnector`, que crea la base de datos y tablas necesarias para la búsqueda.
+
+#### Endpoints de la API
+
+La API tiene dos endpoints principales: `/search/spimi` y `/search/postgres`. Ambos reciben solicitudes POST para realizar búsquedas, y cada uno emplea un método de indexación distinto.
+
+1. **`/search/spimi` - Búsqueda usando SPIMI**:
+
+   - **_Método_**: `POST`
+   - **_Descripción_**: Este endpoint recibe una consulta (query) y un valor `k` que determina el número de resultados a retornar. Utiliza el método de indexación **_SPIMI_** para realizar la búsqueda.
+   - **_Cuerpo de la Solicitud_**:
+     ```json
+     {
+       "query": "texto de búsqueda",
+       "k": 5
+     }
+     ```
+     - `query`: El término de búsqueda que ingresa el usuario.
+     - `k`: La cantidad de resultados a mostrar (por defecto, 5 si no se proporciona).
+   - **_Proceso_**:
+     - La API valida que el `query` esté presente.
+     - Luego, se ejecuta el método `busqueda_topK` del índice SPIMI para obtener los resultados de la búsqueda.
+   - **_Respuesta_**:
+     - La API devuelve un objeto JSON con la lista de resultados, el método utilizado y el tiempo de ejecución de la consulta.
+     ```json
+     {
+       "method": "SPIMI",
+       "query_time": 0.05,
+       "results": [
+         {
+           "track_name": "Song Name",
+           "track_artist": "Artist",
+           "lyrics": "Sample lyrics",
+           "similitudCoseno": 0.85,
+           "row_position": 1
+         }
+       ]
+     }
+     ```
+   - **_Error Handling_**: Si ocurre algún error durante la búsqueda, se registra en el log y la API responde con un mensaje de error.
+
+2. **`/search/postgres` - Búsqueda usando PostgreSQL**:
+   - **_Método_**: `POST`
+   - **_Descripción_**: Similar al endpoint SPIMI, pero utiliza una base de datos PostgreSQL para realizar la búsqueda.
+   - **_Cuerpo de la Solicitud_**:
+     ```json
+     {
+       "query": "texto de búsqueda",
+       "k": 5
+     }
+     ```
+   - **_Proceso_**:
+     - La API valida que el `query` esté presente.
+     - Se llama al método `search` de `PostgresConnector` para ejecutar la consulta en PostgreSQL y obtener los resultados.
+   - **_Respuesta_**:
+     - La API devuelve un objeto JSON con la lista de resultados, el método utilizado y el tiempo de ejecución de la consulta.
+     ```json
+     {
+       "method": "PostgreSQL",
+       "query_time": 0.1,
+       "results": [
+         {
+           "track_name": "Song Name",
+           "track_artist": "Artist",
+           "lyrics": "Sample lyrics",
+           "similitudCoseno": 0.75,
+           "row_position": 2
+         }
+       ]
+     }
+     ```
+   - **_Error Handling_**: Similar al endpoint SPIMI; los errores se registran y se devuelve un mensaje de error en caso de falla.
+
+#### Ejecución de la API
+
+Para ejecutar esta API, primero entrar a la carpeta `backend`:
+
+```bash
+cd backend
+```
+
+Luego, utilizar los siguientes comandos en la terminal:
+
+```bash
+python postgres.py
+```
+
+```bash
+python api1.py
+```
 
 ## Frontend
 
-Para correr el frontend localmente hacer lo siguiente en la terminal
+### 1. Tecnologías Utilizadas
 
-- Entrar a la carpeta `Frontend`
-- Correr los comandos `npm i` y `npm run dev`
-- Entrar al link de `localhost` que aparece en la terminal
+Utilizamos las siguientes tecnologías para el desarrollo del frontend:
 
-Utilizamos React, Vite y Typescript para hacer el frontend. Tenemos 3 componentes principales:
+- **React**: Biblioteca de JavaScript para construir interfaces de usuario.
+- **Vite**: Herramienta de construcción rápida para aplicaciones web.
+- **TypeScript**: Superset de JavaScript que agrega tipado estático.
 
-`Home.tsx`: Página principal donde podemos ir a la página de consultas o visitar el repositorio del proyecto. Ruta `/`.
+### 2. Componentes Principales
 
-![Página home](./imgs/homepage.png)
+La aplicación se organiza en dos componentes principales:
 
-`Consulta.tsx`: Página para hacer las consultas. Podemos elegir distintos métodos de indexación y customizar la cantidad de resultados que queremos para nuestra query personalizada. Ruta `/consulta`.
+1. **Home.tsx**
 
-![Página de consultas](./imgs/front_consulta.png)
+   - **Ruta**: `/`
+   - Página principal con dos opciones:
 
-`Detalle.tsx`: Página para ver los detalles completos de una canción específica. Ruta `/detalle/trackId`.
+     - Ir a la página de consultas.
+     - Visitar el repositorio del proyecto.
 
-![Página details](./imgs/detailspage.png)
+     ![Página home](./imgs/home.png)
 
-### Diseño de GUI
+2. **Consulta.tsx**
+
+   - **Ruta**: `/consulta`
+
+   1. Página para realizar consultas personalizadas:
+
+   - El usuario puede elegir entre dos métodos de indexación: **SPIMI** o **PostgreSQL**.
+   - Personalizar la cantidad de resultados a mostrar.
+
+   ![Página de consultas](./imgs/consulta.png)
+   ![Ingresando consulta](./imgs/ingresainputs.png)
+
+   2. Página de resultados luego de realizar la consulta:
+
+   ![Página resultado de la consulta](./imgs/ConsultaHecha.png)
+
+   3. Página de la ventana emergente que muestra los datos detallados para cada canción:
+      ![Página resultado de la consulta](./imgs/Details.png)
+
+### 3. Diseño de la GUI
 
 Esta aplicación permite que el usuario realice búsquedas de canciones usando dos métodos de indeación: **_SPIMI_** y **_PostgreSQL_**.
 
@@ -139,5 +270,51 @@ Esta aplicación permite que el usuario realice búsquedas de canciones usando d
    - Si el usuario quiere realizar la búsqueda con el método de indexación **_PostgreSQL_**, debe presionar el botón que dice **PostgreSQL**.
 
 #### **_Outputs_**:
+
+1. **Tiempo de Consulta ("Query Time"):**
+
+   - Muestra el tiempo que tomó realizar la búsqueda en milisegundos.
+
+2. **Resultados de la búsqueda:**
+   - Se muestra una tabla con los resultados que coinciden con la búsqueda. Se muestra:
+     - `Track_name`: Nombre de la canción
+     - `Artist`: Nombre del artista
+     - `Lyrics`: letra de la canción
+     - `Similitud`: Muestra la similitud de la canción relacionada a la búsqueda
+     - `row_position`: posición que ocupa la canción en la data
+     - `Detail`: Contiene un botón de "ver" para visualializar los datos a detalle para cada canción.
+
+### 4. Requisitos
+
+Para correr el proyecto, asegúrate de tener instalados los siguientes requisitos:
+
+- `Node.js`: versión mayor o igual a 18.
+- `React`
+- `Vite`
+
+### 5. Configurar y ejecutar la aplicación
+
+Para ejecutar el frontend localmente, sigue estos pasos:
+
+- Clona el repositorio:
+
+  ```bash
+  git clone https://github.com/Dateadores/Proyecto2
+  ```
+
+- Accede a la carpeta `Frontend`:
+
+  ```bash
+  cd Frontend
+  ```
+
+- Instala las dependencias del proyecto:
+  ```bash
+  npm i
+  ```
+- Ejecuta el servidor de desarrollo:
+  ```bash
+  npm run dev
+  ```
 
 ## Pruebas Experimentales
