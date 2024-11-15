@@ -12,14 +12,14 @@ interface Resultado {
 
 const Consulta: React.FC = () => {
   const [query, setQuery] = useState<string>('');
-  const [k, setK] = useState<number>(5);
+  const [k, setK] = useState<number>();
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [expandedTrack, setExpandedTrack] = useState<Resultado | null>(null);
-  const [searchExecuted, setSearchExecuted] = useState<boolean>(false); // Estado para saber si se ha hecho una búsqueda
+  const [searchExecuted, setSearchExecuted] = useState<boolean>(false);
 
   const mostrarResultados = (data: { results: Resultado[] }) => {
     setResultados(data.results);
-    setSearchExecuted(true); // Marcar que se ha ejecutado una búsqueda
+    setSearchExecuted(true);
   };
 
   const obtenerValorK = () => {
@@ -133,16 +133,18 @@ const Consulta: React.FC = () => {
         )}
 
         {expandedTrack && (
-          <div className="detalle-cancion">
-            <h2>Detalles de la Canción</h2>
-            <p><strong>Track Name:</strong> {expandedTrack.track_name}</p>
-            <p><strong>Artist:</strong> {expandedTrack.track_artist}</p>
-            <div className="lyrics-scroll">
-              <p><strong>Lyrics:</strong> {expandedTrack.lyrics}</p>
+          <div className="overlay">
+            <div className="detalle-cancion modal">
+              <h2>Song Details</h2>
+              <p><strong>Track Name:</strong> {expandedTrack.track_name}</p>
+              <p><strong>Artist:</strong> {expandedTrack.track_artist}</p>
+              <div className="lyrics-scroll">
+                <p><strong>Lyrics:</strong> {expandedTrack.lyrics}</p>
+              </div>
+              <p><strong>Similitud:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
+              <p><strong>Row Position:</strong> {expandedTrack.row_position}</p>
+              <button onClick={cerrarDetalle}>Cerrar</button>
             </div>
-            <p><strong>Similitud Coseno:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
-            <p><strong>Row Position:</strong> {expandedTrack.row_position}</p>
-            <button onClick={cerrarDetalle}>Cerrar</button>
           </div>
         )}
       </div>

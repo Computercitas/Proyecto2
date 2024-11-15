@@ -11,18 +11,17 @@ body {
 }
 
 /* Contenedor principal */
-/* Contenedor principal */
 .Consulta {
   background-color: #5aa266;
-  padding: 40px; /* Aumenta el padding para más espacio interno */
+  padding: 40px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  width: 90%; /* Cambia de 100% a 90% para que sea más ancho */
-  max-width: 800px; /* Aumenta el ancho máximo de 700px a 800px */
+  width: 90%;
+  max-width: 800px;
   text-align: center;
-  margin: 20px auto; /* Centra el contenedor con un margen superior */
+  overflow-y: auto;
+  max-height: 80vh;
 }
-
 
 /* Título */
 .Consulta h1 {
@@ -82,7 +81,8 @@ button:focus {
 /* Tabla de resultados */
 .resultados-container {
   margin-top: 30px;
-  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 50vh;
 }
 
 .resultados-table {
@@ -127,39 +127,62 @@ button:focus {
   background-color: #2563eb;
 }
 
-/* Detalle de la canción */
-.detalle-cancion {
-  background-color: #444444;
-  padding: 20px;
-  margin-top: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  text-align: left;
-  color: #f0f0f0;
+/* Modal y overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
 }
 
-.detalle-cancion h2 {
-  font-size: 20px;
+.modal {
+  background-color: #333;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 500px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  color: #f0f0f0;
+  text-align: left;
+}
+
+.modal h2 {
+  color: #ffffff;
   margin-bottom: 15px;
 }
 
-.detalle-cancion p {
-  margin: 8px 0;
+.modal p {
+  margin: 10px 0;
 }
 
+.modal button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  color: #f0f0f0;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.modal button:hover {
+  background-color: #2563eb;
+}
+
+/* Scroll en los detalles de lyrics */
 .lyrics-scroll {
   max-height: 150px;
   overflow-y: auto;
-  background-color: #333;
+  background-color: #222;
   padding: 10px;
   border-radius: 4px;
-  margin: 10px 0;
-  color: #dddddd;
-}
-
-/* Mensaje de no resultados */
-#resultados p {
-  font-size: 18px;
-  color: #cccccc;
-  margin-top: 20px;
 }
