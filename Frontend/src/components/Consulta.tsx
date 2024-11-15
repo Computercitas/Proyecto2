@@ -92,7 +92,7 @@ const Consulta: React.FC = () => {
           onChange={(e) => setK(Number(e.target.value))}
         />
       </div>
-      <div>
+      <div className="botones-container">
         <button onClick={searchSPIMI}>SPIMI</button>
         <button onClick={searchPostgres}>PostgreSQL</button>
       </div>

@@ -55,3 +55,10 @@
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
+.botones-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 15px;
+}
