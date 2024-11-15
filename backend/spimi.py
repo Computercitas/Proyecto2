@@ -186,7 +186,7 @@ class SPIMI:
         if additional_features is None:
             additional_features = []
 
-        start_time = time.time()
+        start_time = time.perf_counter()
         scores = self.similitudCoseno(query)
         sorted_scores = sorted(scores.items(), key=lambda item: item[1], reverse=True)
         top_k_results = sorted_scores[:k]
@@ -207,7 +207,7 @@ class SPIMI:
                     result[feature] = self.data.iloc[doc_id][feature]
             results.append(result)
 
-        end_time = time.time()
+        end_time = time.perf_counter()
 
         return {
             'query_time': end_time - start_time,

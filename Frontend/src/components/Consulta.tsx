@@ -72,7 +72,7 @@ const Consulta: React.FC = () => {
 
   return (
     <div className="Consulta">
-      <h1>¡Make your enquiry!</h1>
+      <h1>Make your query!</h1>
       <div>
         <label htmlFor="query">Enter your query:</label>
         <input
@@ -100,7 +100,7 @@ const Consulta: React.FC = () => {
       <div id="resultados">
         {queryTime !== null && (
           <div className="execution-time">
-            <h3>Tiempo de Ejecución: {queryTime.toFixed(5)} s</h3>
+            <h3>Execution time: {queryTime.toFixed(5)} s</h3>
           </div>
         )}
 
@@ -115,9 +115,9 @@ const Consulta: React.FC = () => {
                   <th>Track Name</th>
                   <th>Artist</th>
                   <th>Lyrics</th>
-                  <th>Similitud</th>
+                  <th>Similarity</th>
                   <th>Row Position</th>
-                  <th>Detail</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -129,7 +129,7 @@ const Consulta: React.FC = () => {
                     <td>{resultado.similitudCoseno || resultado.similitud}</td>
                     <td>{resultado.row_position}</td>
                     <td>
-                      <button onClick={() => verDetalle(resultado)}>Ver</button>
+                      <button onClick={() => verDetalle(resultado)}>More</button>
                     </td>
                   </tr>
                 ))}
@@ -147,9 +147,9 @@ const Consulta: React.FC = () => {
               <div className="lyrics-scroll">
                 <p><strong>Lyrics:</strong> {expandedTrack.lyrics}</p>
               </div>
-              <p><strong>Similitud:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
+              <p><strong>Similarity:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
               <p><strong>Row Position:</strong> {expandedTrack.row_position}</p>
-              <button onClick={cerrarDetalle}>Cerrar</button>
+              <button onClick={cerrarDetalle}>Close</button>
             </div>
           </div>
         )}
