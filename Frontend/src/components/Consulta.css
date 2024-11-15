@@ -8,6 +8,7 @@ body {
   align-items: center;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden; /* Elimina el scroll horizontal */
 }
 
 /* Contenedor principal */
@@ -185,4 +186,15 @@ button:focus {
   background-color: #222;
   padding: 10px;
   border-radius: 4px;
+}
+
+/* Estilo para el tiempo de ejecución */
+.execution-time {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #333;
+  color: #fff;
+  font-size: 16px;
+  border-radius: 8px;
+  text-align: center;
 }

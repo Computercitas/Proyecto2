@@ -12,13 +12,15 @@ interface Resultado {
 
 const Consulta: React.FC = () => {
   const [query, setQuery] = useState<string>('');
-  const [k, setK] = useState<number>();
+  const [k, setK] = useState<number>(5);
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [expandedTrack, setExpandedTrack] = useState<Resultado | null>(null);
   const [searchExecuted, setSearchExecuted] = useState<boolean>(false);
+  const [queryTime, setQueryTime] = useState<number | null>(null);  // Tiempo de ejecución
 
-  const mostrarResultados = (data: { results: Resultado[] }) => {
+  const mostrarResultados = (data: { results: Resultado[], query_time: number }) => {
     setResultados(data.results);
+    setQueryTime(data.query_time);  // Asignar el tiempo de ejecución
     setSearchExecuted(true);
   };
 
@@ -34,8 +36,7 @@ const Consulta: React.FC = () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
-        mostrarResultados(data);
+        mostrarResultados(data);  // Mostrar resultados con query_time
       })
       .catch((error) => console.error('Error en búsqueda SPIMI:', error));
   };
@@ -48,8 +49,7 @@ const Consulta: React.FC = () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
-        mostrarResultados(data);
+        mostrarResultados(data);  // Mostrar resultados con query_time
       })
       .catch((error) => console.error('Error en búsqueda PostgreSQL:', error));
   };
@@ -98,6 +98,12 @@ const Consulta: React.FC = () => {
       </div>
 
       <div id="resultados">
+        {queryTime !== null && (
+          <div className="execution-time">
+            <h3>Tiempo de Ejecución: {queryTime.toFixed(5)} s</h3>
+          </div>
+        )}
+
         {searchExecuted && resultados.length === 0 && (
           <p>No results found.</p>
         )}
