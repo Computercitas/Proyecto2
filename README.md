@@ -239,7 +239,7 @@ La aplicación se organiza en dos componentes principales:
 
      -Página para realizar consultas personalizadas:
      
-     ![Ingresando consulta](./imgs/Ingresando inputs.png)
+     ![Ingresando consulta](./imgs/Ingresandoinputs.png)
 
      - Página de resultados luego de realizar la consulta:
 
