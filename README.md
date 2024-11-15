@@ -226,30 +226,27 @@ La aplicación se organiza en dos componentes principales:
 1. **Home.tsx**
 
    - **Ruta**: `/`
-   - Página principal con dos opciones:
-
-     - Ir a la página de consultas.
-     - Visitar el repositorio del proyecto.
-
-     ![Página home](./imgs/home.png)
+     - Página principal con dos opciones:
+  
+       - Ir a la página de consultas.
+       - Visitar el repositorio del proyecto.
+  
+       ![Página home](./imgs/home.png)
 
 2. **Consulta.tsx**
 
    - **Ruta**: `/consulta`
 
-   1. Página para realizar consultas personalizadas:
+     -Página para realizar consultas personalizadas:
+     
+     ![Ingresando consulta](./imgs/ingresainputs.png)
 
-   - El usuario puede elegir entre dos métodos de indexación: **SPIMI** o **PostgreSQL**.
-   - Personalizar la cantidad de resultados a mostrar.
-   
-   ![Ingresando consulta](./imgs/ingresainputs.png)
+     - Página de resultados luego de realizar la consulta:
 
-   2. Página de resultados luego de realizar la consulta:
+     ![Página resultado de la consulta](./imgs/ConsultaHecha.png)
 
-   ![Página resultado de la consulta](./imgs/ConsultaHecha.png)
-
-   3. Página de la ventana emergente que muestra los datos detallados para cada canción:
-      ![Página resultado de la consulta](./imgs/Details.png)
+     - Página de la ventana emergente que muestra los datos detallados para cada canción:
+     ![Página resultado de la consulta](./imgs/Details.png)
 
 ### 3. Diseño de la GUI
 
