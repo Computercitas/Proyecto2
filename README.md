@@ -146,11 +146,12 @@ La API tiene dos endpoints principales: `/search/spimi` y `/search/postgres`. Am
        "query_time": 0.05,
        "results": [
          {
-           "track_name": "Song Name",
-           "track_artist": "Artist",
            "lyrics": "Sample lyrics",
+           "row_position": 1,
            "similitudCoseno": 0.85,
-           "row_position": 1
+           "track_artist": "Artist",
+           "track_id": "Sample ID",
+           "track_name": "Song Name"
          }
        ]
      }
@@ -178,11 +179,12 @@ La API tiene dos endpoints principales: `/search/spimi` y `/search/postgres`. Am
        "query_time": 0.1,
        "results": [
          {
-           "track_name": "Song Name",
-           "track_artist": "Artist",
            "lyrics": "Sample lyrics",
-           "similitudCoseno": 0.75,
-           "row_position": 2
+           "row_position": "(1,2)",
+           "similitud": 25.1,
+           "track_artist": "Artist",
+           "track_id": "sample ID",
+           "track_name": "Song Name"
          }
        ]
      }
