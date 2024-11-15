@@ -241,8 +241,6 @@ La aplicación se organiza en dos componentes principales:
 
    - El usuario puede elegir entre dos métodos de indexación: **SPIMI** o **PostgreSQL**.
    - Personalizar la cantidad de resultados a mostrar.
-
-   ![Página de consultas](./imgs/consulta.png)
    
    ![Ingresando consulta](./imgs/ingresainputs.png)
 
