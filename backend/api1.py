@@ -19,7 +19,7 @@ spimi = SPIMI(csv_path=path)
 db = PostgresConnector()
 db.setup_database()
 
-# Endpoints para SPIMI
+# Endpoint para SPIMI
 @app.route('/search/spimi', methods=['POST'])
 def search_spimi():
     try:
@@ -31,12 +31,16 @@ def search_spimi():
             return jsonify({'error': 'Query parameter is required'}), 400
 
         results = spimi.busqueda_topK(query, k)
-        return jsonify(results)
+        return jsonify({
+            "method": "SPIMI",
+            "query_time": results.get("query_time", 0),
+            "results": results.get("results", [])
+        })
     except Exception as e:
         logger.error(f"Error en búsqueda SPIMI: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Endpoints para PostgreSQL
+# Endpoint para PostgreSQL
 @app.route('/search/postgres', methods=['POST'])
 def search_postgres():
     try:
@@ -48,25 +52,13 @@ def search_postgres():
             return jsonify({'error': 'Query parameter is required'}), 400
 
         results = db.search(query, k)
-        return jsonify(results)
+        return jsonify({
+            "method": "PostgreSQL",
+            "query_time": results.get("query_time", 0),
+            "results": results.get("results", [])
+        })
     except Exception as e:
         logger.error(f"Error en búsqueda PostgreSQL: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/search/postgres/lyrics', methods=['POST'])
-def search_postgres_lyrics():
-    try:
-        data = request.get_json()
-        lyrics = data.get('lyrics')
-        k = int(data.get('k', 5))
-
-        if not lyrics:
-            return jsonify({'error': 'Lyrics parameter is required'}), 400
-
-        results = db.search_lyrics(lyrics, k)
-        return jsonify(results)
-    except Exception as e:
-        logger.error(f"Error en búsqueda de letras PostgreSQL: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

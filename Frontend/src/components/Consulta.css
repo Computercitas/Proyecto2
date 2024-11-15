@@ -1,0 +1,61 @@
+/* Estilos para la tabla de resultados */
+.resultados-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.resultados-table th,
+.resultados-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.resultados-table th {
+  background-color: #f4f4f4;
+}
+
+.resultados-container {
+  overflow-y: scroll;
+  max-height: 400px;
+  margin-top: 20px;
+}
+
+/* Estilos para el contenedor de las letras con scroll */
+.lyrics-cell {
+  max-height: 100px; /* Ajusta la altura máxima según lo necesites */
+  overflow-y: auto;
+  white-space: pre-wrap; /* Para que el texto se ajuste y se vea correctamente */
+  word-wrap: break-word; /* Para evitar que las palabras largas se desborden */
+}
+
+/* Estilos para la ventana emergente */
+.detalle-cancion {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: black;
+  padding: 20px;
+  border: 2px solid #ddd;
+  box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+  z-index: 1000; /* Asegura que el modal esté encima */
+}
+
+.detalle-cancion button {
+  margin-top: 10px;
+}
+
+/* Estilo de la sección de Lyrics en el modal */
+.lyrics-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap; /* Asegura que el texto se ajuste y se vea correctamente */
+  word-wrap: break-word; /* Para evitar que las palabras largas se desborden */
+}
+
+.resultados-table th,
+.resultados-table td {
+  color: black; /* Asegura que los atributos sean negros */
+}

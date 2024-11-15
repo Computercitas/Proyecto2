@@ -1,242 +1,150 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
+import './Consulta.css';
 
-// Define las interfaces para los diferentes tipos de resultados
-interface SPIMIResult {
-  track_id: string;
+interface Resultado {
   track_name: string;
   track_artist: string;
   lyrics: string;
+  similitudCoseno?: number;
+  similitud?: number;
   row_position: number;
-  similitudCoseno: number;
-}
-
-interface PostgresResult {
-  track_id: string;
-  track_name: string;
-  track_artist: string;
-  lyrics: string;
-  score: number;  // El campo score se usa en resultados de PostgreSQL
-  rank: number;
-}
-
-// Tipo unión para manejar ambos tipos de resultados
-type QueryResult = SPIMIResult | PostgresResult;
-
-interface ApiResponse {
-  results?: QueryResult[];
-  error?: string;
-  query_time?: number;
 }
 
 const Consulta: React.FC = () => {
-  const [query, setQuery] = useState<string>("");
-  const [topK, setTopK] = useState<number>(10);
-  const [indexMethod, setIndexMethod] = useState<string>("SPIMI");
-  const [results, setResults] = useState<QueryResult[]>([]);
-  const [queryTime, setQueryTime] = useState<number>(0);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
+  const [query, setQuery] = useState<string>('');
+  const [k, setK] = useState<number>(5);
+  const [resultados, setResultados] = useState<Resultado[]>([]);
+  const [expandedTrack, setExpandedTrack] = useState<Resultado | null>(null);
 
-  const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(event.target.value);
+  const mostrarResultados = (data: { results: Resultado[] }) => {
+    setResultados(data.results);
   };
 
-  const handleTopKChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setTopK(Number(event.target.value));
+  const obtenerValorK = () => {
+    return k ? parseInt(k.toString()) : 5;
   };
 
-  const handleIndexMethodChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setIndexMethod(event.target.value);
+  const searchSPIMI = () => {
+    fetch('http://localhost:5000/search/spimi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query, k: obtenerValorK() }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        mostrarResultados(data);
+      })
+      .catch((error) => console.error('Error en búsqueda SPIMI:', error));
   };
 
-  const getEndpoint = (method: string) => {
-    switch (method) {
-      case "SPIMI":
-        return "http://127.0.0.1:5000/search/spimi";
-      case "PostgreSQL":
-        return "http://127.0.0.1:5000/search/postgres";
-      default:
-        return "http://127.0.0.1:5000/search/spimi";
+  const searchPostgres = () => {
+    fetch('http://localhost:5000/search/postgres', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query, k: obtenerValorK() }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log(data);
+        mostrarResultados(data);
+      })
+      .catch((error) => console.error('Error en búsqueda PostgreSQL:', error));
+  };
+
+  const recortarLyrics = (lyrics: string) => {
+    const palabras = lyrics.split(' ');
+    if (palabras.length > 5) {
+      return palabras.slice(0, 5).join(' ') + '...';
     }
+    return lyrics;
   };
 
-  // Función para normalizar los resultados
-  const normalizeResult = (result: QueryResult): SPIMIResult => {
-    if ('similitudCoseno' in result) {
-      // Resultado SPIMI
-      return result as SPIMIResult;
-    } else {
-      // Resultado PostgreSQL
-      const postgresResult = result as PostgresResult;
-      return {
-        track_id: postgresResult.track_id,
-        track_name: postgresResult.track_name,
-        track_artist: postgresResult.track_artist,
-        lyrics: postgresResult.lyrics,
-        row_position: postgresResult.rank,
-        similitudCoseno: postgresResult.score // Mapear el score a similitudCoseno
-      };
-    }
+  // Función para expandir la información de una canción
+  const verDetalle = (resultado: Resultado) => {
+    setExpandedTrack(resultado);
   };
 
-  const handleSubmit = async () => {
-    if (!query.trim()) {
-      setError("Por favor, ingresa una consulta");
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const startTime = performance.now();
-      const endpoint = getEndpoint(indexMethod);
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query, k: topK }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error en la consulta: ${errorText}`);
-      }
-
-      const data = await response.json();
-      const endTime = performance.now();
-
-      console.log('Respuesta del servidor:', data);
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      let processedResults: QueryResult[];
-      if (Array.isArray(data)) {
-        processedResults = data;
-      } else if (data.results) {
-        processedResults = data.results;
-      } else {
-        processedResults = [];
-      }
-
-      setResults(processedResults.map(normalizeResult));  // Normalizar todos los resultados
-      setQueryTime(data.query_time || (endTime - startTime));
-      setError(null);
-    } catch (error: unknown) {
-      console.error("Error al realizar la consulta:", error);
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("Hubo un problema con la consulta. Inténtalo de nuevo.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleViewDetails = (result: QueryResult) => {
-    navigate(`/details/${result.track_id}`, { state: { result } });
+  // Función para cerrar la ventana emergente
+  const cerrarDetalle = () => {
+    setExpandedTrack(null); // Esto "cierra" el detalle sin navegar a otra página
   };
 
   return (
-    <div className="consulta-container p-4">
-      <h2 className="text-2xl font-bold mb-4">Realiza tu consulta</h2>
-
-      <div className="mb-4">
-        <label className="block mb-2">Consulta:</label>
+    <div className="Consulta">
+      <h1>¡Realiza tu consulta!</h1>
+      <div>
+        <label htmlFor="query">Enter your query:</label>
         <input
           type="text"
+          id="query"
           value={query}
-          onChange={handleQueryChange}
-          placeholder="Ingresa tu consulta"
-          className="w-full p-2 border rounded"
+          onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2">Cantidad de resultados (Top K):</label>
+      <div>
+        <label htmlFor="k">Enter the value of k:</label>
         <input
           type="number"
-          value={topK}
-          onChange={handleTopKChange}
-          min={1}
-          max={1000}
-          className="w-full p-2 border rounded"
+          id="k"
+          value={k}
+          min="1"
+          onChange={(e) => setK(Number(e.target.value))}
         />
       </div>
-
-      <div className="mb-4">
-        <label className="block mb-2">Método de indexación:</label>
-        <select
-          value={indexMethod}
-          onChange={handleIndexMethodChange}
-          className="w-full p-2 border rounded"
-        >
-          <option value="SPIMI">SPIMI</option>
-          <option value="PostgreSQL">PostgreSQL</option>
-        </select>
+      <div>
+        <button onClick={searchSPIMI}>SPIMI</button>
+        <button onClick={searchPostgres}>PostgreSQL</button>
       </div>
 
-      <button
-        onClick={handleSubmit}
-        disabled={isLoading}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-      >
-        {isLoading ? "Buscando..." : "Buscar"}
-      </button>
-
-      {error && <p className="text-red-500 mt-4">{error}</p>}
-
-      {results.length > 0 && (
-        <div className="results mt-8">
-          <h3 className="text-xl font-bold mb-2">Resultados</h3>
-          <p className="mb-4">Tiempo de consulta: {queryTime.toFixed(2)} milisegundos</p>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse border">
+      <div id="resultados">
+        {resultados.length === 0 ? (
+          <p>No se encontraron resultados.</p>
+        ) : (
+          <div className="resultados-container">
+            <table className="resultados-table">
               <thead>
-                <tr className="bg-gray-100">
-                  <th className="border p-2">Acciones</th>
-                  <th className="border p-2">Track ID</th>
-                  <th className="border p-2">Track Name</th>
-                  <th className="border p-2">Track Artist</th>
-                  <th className="border p-2">Lyrics</th>
-                  <th className="border p-2">Posición</th>
-                  <th className="border p-2">Similitud</th>
+                <tr>
+                  <th>Track Name</th>
+                  <th>Artist</th>
+                  <th>Lyrics</th>
+                  <th>Similitud</th>
+                  <th>Row Position</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {results.map((result, index) => {
-                  const normalizedResult = normalizeResult(result);
-                  return (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border p-2">
-                        <button
-                          onClick={() => handleViewDetails(result)}
-                          className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
-                        >
-                          Ver
-                        </button>
-                      </td>
-                      <td className="border p-2">{normalizedResult.track_id ? `${normalizedResult.track_id.substring(0, 10)}...` : 'N/A'}</td>
-                      <td className="border p-2">{normalizedResult.track_name ? (normalizedResult.track_name.length > 15 ? `${normalizedResult.track_name.substring(0, 15)}...` : normalizedResult.track_name) : 'N/A'}</td>
-                      <td className="border p-2">{normalizedResult.track_artist ? (normalizedResult.track_artist.length > 15 ? `${normalizedResult.track_artist.substring(0, 15)}...` : normalizedResult.track_artist) : 'N/A'}</td>
-                      <td className="border p-2">{normalizedResult.lyrics ? (normalizedResult.lyrics.length > 25 ? `${normalizedResult.lyrics.substring(0, 25)}...` : normalizedResult.lyrics) : 'N/A'}</td>
-                      <td className="border p-2">{normalizedResult.row_position}</td>
-                      <td className="border p-2">{normalizedResult.similitudCoseno?.toFixed(2) ?? 'NA'}</td>
-                    </tr>
-                  );
-                })}
+                {resultados.map((resultado, index) => (
+                  <tr key={index}>
+                    <td>{resultado.track_name}</td>
+                    <td>{resultado.track_artist}</td>
+                    <td>{recortarLyrics(resultado.lyrics)}</td>
+                    <td>{resultado.similitudCoseno || resultado.similitud}</td>
+                    <td>{resultado.row_position}</td>
+                    <td>
+                      <button onClick={() => verDetalle(resultado)}>Ver</button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+
+        {expandedTrack && (
+          <div className="detalle-cancion">
+            <h2>Detalles de la Canción</h2>
+            <p><strong>Track Name:</strong> {expandedTrack.track_name}</p>
+            <p><strong>Artist:</strong> {expandedTrack.track_artist}</p>
+            <div className="lyrics-scroll">
+              <p><strong>Lyrics:</strong> {expandedTrack.lyrics}</p>
+            </div>
+            <p><strong>Similitud Coseno:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
+            <p><strong>Row Position:</strong> {expandedTrack.row_position}</p>
+            <button onClick={cerrarDetalle}>Cerrar</button> {/* Botón para cerrar el detalle */}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
