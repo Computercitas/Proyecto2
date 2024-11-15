@@ -15,9 +15,11 @@ const Consulta: React.FC = () => {
   const [k, setK] = useState<number>(5);
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [expandedTrack, setExpandedTrack] = useState<Resultado | null>(null);
+  const [searchExecuted, setSearchExecuted] = useState<boolean>(false); // Estado para saber si se ha hecho una búsqueda
 
   const mostrarResultados = (data: { results: Resultado[] }) => {
     setResultados(data.results);
+    setSearchExecuted(true); // Marcar que se ha ejecutado una búsqueda
   };
 
   const obtenerValorK = () => {
@@ -60,14 +62,12 @@ const Consulta: React.FC = () => {
     return lyrics;
   };
 
-  // Función para expandir la información de una canción
   const verDetalle = (resultado: Resultado) => {
     setExpandedTrack(resultado);
   };
 
-  // Función para cerrar la ventana emergente
   const cerrarDetalle = () => {
-    setExpandedTrack(null); // Esto "cierra" el detalle sin navegar a otra página
+    setExpandedTrack(null);
   };
 
   return (
@@ -98,9 +98,10 @@ const Consulta: React.FC = () => {
       </div>
 
       <div id="resultados">
-        {resultados.length === 0 ? (
+        {searchExecuted && resultados.length === 0 && (
           <p>No se encontraron resultados.</p>
-        ) : (
+        )}
+        {resultados.length > 0 && (
           <div className="resultados-container">
             <table className="resultados-table">
               <thead>
@@ -115,7 +116,7 @@ const Consulta: React.FC = () => {
               </thead>
               <tbody>
                 {resultados.map((resultado, index) => (
-                  <tr key={index}>
+                  <tr key={index} className="resultado-row">
                     <td>{resultado.track_name}</td>
                     <td>{resultado.track_artist}</td>
                     <td>{recortarLyrics(resultado.lyrics)}</td>
@@ -141,7 +142,7 @@ const Consulta: React.FC = () => {
             </div>
             <p><strong>Similitud Coseno:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
             <p><strong>Row Position:</strong> {expandedTrack.row_position}</p>
-            <button onClick={cerrarDetalle}>Cerrar</button> {/* Botón para cerrar el detalle */}
+            <button onClick={cerrarDetalle}>Cerrar</button>
           </div>
         )}
       </div>
