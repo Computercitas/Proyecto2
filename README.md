@@ -243,6 +243,7 @@ La aplicación se organiza en dos componentes principales:
    - Personalizar la cantidad de resultados a mostrar.
 
    ![Página de consultas](./imgs/consulta.png)
+   
    ![Ingresando consulta](./imgs/ingresainputs.png)
 
    2. Página de resultados luego de realizar la consulta:
