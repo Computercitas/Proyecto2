@@ -1,6 +1,7 @@
 import os
 import re
 import pandas as pd
+import csv
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -18,11 +19,12 @@ nltk.download('punkt_tab')
 nltk.download('stopwords')
 
 class SPIMI:
-    def __init__(self, csv_path, bloqueTamano=5000, pathTemp='indice', indexF='indexFinal.json'):
-        self.data = self.cargarDatos(csv_path)
-        self.letra = self.data['lyrics'].fillna('').tolist()
-        self.metaData = self.data[['track_id', 'track_name', 'track_artist', 'lyrics', 'track_album_name']].to_dict('records')
-        self.bloqueTamano = bloqueTamano
+    def __init__(self, csv_path, pathTemp='indice', indexF='indexFinal.json'):
+        self.csv_path = csv_path
+        self.mb_per_block = 4 * 1024 * 1024 #4MB
+        self.data = self.cargarDatos(csv_path)               #TODO: Change this
+        self.letra = self.data['lyrics'].fillna('').tolist() #TODO: Change this 
+        self.metaData = self.data[['track_id', 'track_name', 'track_artist', 'lyrics', 'track_album_name']].to_dict('records') #TODO: Change this
         self.pathTemp = pathTemp
         self.indexF = indexF
         self.num_docs = len(self.letra)
@@ -37,17 +39,10 @@ class SPIMI:
             os.makedirs(self.pathTemp)
 
         if not os.path.isfile(self.indexF):
-            self.construirSpimi()
+            self.construirSpimi(self.mb_per_block)
             self.merge()
             self.eliminarIdx_n()
         self.cargarIndice()
-
-    def cargarDatos(self, path):
-        data = pd.read_csv(path)
-        if 'lyrics' not in data.columns:
-            raise ValueError("El archivo CSV debe contener una columna llamada 'lyrics'")
-        return data
-
 
     def eliminarIdx_n(self):
         for bloque_file in os.listdir(self.pathTemp):
@@ -63,30 +58,42 @@ class SPIMI:
         tokens = [self.stemmer.stem(word) for word in tokens if word not in self.stop_words and word.isalpha()]
         return tokens
 
-    def construirSpimi(self):
-        for bloqeuID, i in enumerate(range(0, len(self.letra), self.bloqueTamano)):
-            bloque = self.letra[i:i + self.bloqueTamano]
-            diccionario = defaultdict(list)
-            normas = defaultdict(float)
+    def construirSpimi(self, limite_mb_bloque):
+        block_number = 0
+        start_line = 0
 
-            for doc_id, texto in enumerate(bloque):
-                tokens = self.preProcesamiento(texto)
-                term_freq = Counter(tokens)
+        while True:  # Creo bloques hasta haber leído todo el csv
+            diccionario = defaultdict(list)  # Índice invertido (diccionario con tokens, frecuencias y IDs de documento)
+            normas = defaultdict(float)      # Diccionario de normas
+            
+            with open(self.csv_path, mode='r', encoding='utf-8') as file:
+                reader = csv.reader(file)    # Iterador para leer línea por línea
+                for _ in range(start_line):  # Salta hasta la línea donde quedamos en la iteración anterior
+                    next(reader, None)
 
-                for term, freq in term_freq.items():
-                    diccionario[term].append([i + doc_id, freq])
-                    normas[str(i + doc_id)] += freq ** 2
+                for i, row in enumerate(reader, start=start_line + 1):  # Continúa desde la última línea leída
+                    if sys.getsizeof(diccionario) + sys.getsizeof(normas) >= limite_mb_bloque:  # Verificar si queda espacio en el bloque
+                        break
+                    
+                    tokens = Counter(self.preProcesamiento(row[3]))  # Preprocesar la letra (cuarta columna) y contar frecuencia
+                    for term, freq in tokens.items():
+                        diccionario[term].append([i, freq])  # i es el docId (línea que estamos leyendo)
+                        normas[str(i)] += freq ** 2
 
-            bloque_data = {
-                'diccionario': dict(diccionario),
-                'normas': dict(normas)
-            }
-            if sys.getsizeof(bloque_data) <= 4 * 1024 * 1024:
-                bloque_path = os.path.join(self.pathTemp, f'bloque_{bloqeuID}.json')
-                with open(bloque_path, 'w', encoding='utf-8') as f:
-                    json.dump(bloque_data, f, ensure_ascii=False)
-            else:
-                print(f"El bloque {bloqeuID} excede el tamaño límite de 4 MB.")
+            bloque_data = {'diccionario': dict(diccionario), 'normas': dict(normas)}  # Concateno normas e índice invertido
+
+            # Guardar bloque en un archivo JSON
+            bloque_path = os.path.join(self.pathTemp, f'bloque_{block_number}.json')
+            with open(bloque_path, 'w', encoding='utf-8') as f:
+                json.dump(bloque_data, f, ensure_ascii=False)
+
+            # Preparar para el siguiente bloque
+            start_line = i + 1  # Continuar desde la última línea leída
+            block_number += 1
+
+            # Verificar condición de parada: si ya no quedan más líneas por leer
+            if sys.getsizeof(diccionario) + sys.getsizeof(normas) < limite_mb_bloque:
+                break
 
     def merge(self):
         bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
@@ -214,7 +221,8 @@ class SPIMI:
             'results': results
         }
 # Uso
-#spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
+spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
+
 # Busqueda
 #query = 'hello'
 #result = spimi.busqueda_topK(query, k=5)
