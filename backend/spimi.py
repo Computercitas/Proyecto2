@@ -20,33 +20,28 @@ nltk.download('punkt_tab')
 nltk.download('stopwords')
 
 class SPIMI:
-    def __init__(self, csv_path, pathTemp='indice', indexF='indexFinal.json'):
+    def __init__(self, csv_path, pathTemp='indice'):
         self.csv_path = csv_path
-        self.mb_per_block = 4 * 1024 * 16 #4MB
-        #self.data = self.cargarDatos(csv_path)               #TODO: Change this
-        #self.letra = self.data['lyrics'].fillna('').tolist() #TODO: Change this 
-        #self.metaData = self.data[['track_id', 'track_name', 'track_artist', 'lyrics', 'track_album_name']].to_dict('records') #TODO: Change this
-        self.total_docs = 0
+        self.mb_per_block = 4 * 1024 * 1024 #4MB
+        self.total_docs = self.count_csv_rows()
         self.pathTemp = pathTemp
-        self.indexF = indexF
         self.stop_words = set(stopwords.words('spanish')).union(set(stopwords.words('english')))
         self.stemmer = SnowballStemmer('english')
-        self.tfidf_cache = defaultdict(dict)
         self.build_time = 0  # Para medir el tiempo de construcción del índice
-
-        self.diccionario = defaultdict(list)
-        self.normas = defaultdict(float)
 
         if not os.path.exists(self.pathTemp):
             os.makedirs(self.pathTemp)
-
-        if not os.path.isfile(self.indexF):
             self.construirSpimi(self.mb_per_block)
             self.merge()
             #self.eliminarIdx_n() 
             print("Tiempo de construcción del índice para ", self.total_docs, " documentos: ", round(self.build_time, 2)*1000, "ms")
+        else: 
+            print("Reutilizando índice para ", csv_path, " con ", self.total_docs, " filas")
+            #Borrar la carpeta indice si es que quieres probar con un csv diferente, para que se genere el índice denuevo
 
-        #self.cargarIndice()
+    def count_csv_rows(self): #Calcular total de documentos (sin cargar todo el csv en la RAM)
+        with open(self.csv_path, 'r', encoding='utf-8') as file:
+            return sum(1 for _ in file) - 1 #-1 por el header
 
     def eliminarIdx_n(self):
         for bloque_file in os.listdir(self.pathTemp):
@@ -76,7 +71,6 @@ class SPIMI:
                     next(reader, None)
 
                 for i, row in enumerate(reader, start=start_line + 1):  # Continúa desde la última línea leída
-                    self.total_docs += 1 #Contar número de docs en el csv (usado en otras funciones)
                     if sys.getsizeof(diccionario) + sys.getsizeof(normas) >= limite_mb_bloque:  # Verificar si queda espacio en el bloque
                         break
                     
@@ -103,11 +97,13 @@ class SPIMI:
         end_time = time.perf_counter()
         self.build_time = end_time - start_time #Le voy a sumar el merge a esto, ya que es parte de la construcción
 
-    def merge(self):
-        start_time = time.perf_counter() #Para ver el tiempo del merge (parte de la construcción del índice)
+    def merge(self): #TODO: Hacer merge en memoria secundaria, sin traer todo a la RAM
+        start_time = time.perf_counter() 
+
+        all_tokens = defaultdict(list)  
+        combined_norms = defaultdict(float)  
 
         bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
-        normas = defaultdict(float)
 
         for bloque_file in bloque_files:
             with open(bloque_file, 'r', encoding='utf-8') as f:
@@ -115,90 +111,48 @@ class SPIMI:
                 diccionario = bloque_data['diccionario']
                 bloque_normas = bloque_data['normas']
 
-                sorted_dict = sorted(dict(diccionario).items(), key=lambda item: item[0])
+                for token, posting_list in dict(diccionario).items():
+                    all_tokens[token].extend(posting_list)
 
-            for doc_id, norm in bloque_normas.items():
-                normas[int(doc_id)] += norm
+                for doc_id, norm in bloque_normas.items():
+                    combined_norms[int(doc_id)] += norm
 
-            sorted_block = {
-            'diccionario': sorted_dict,
-            'normas': normas
-            }
-            with open(bloque_file, 'w', encoding='utf-8') as file:
-                json.dump(sorted_block, file, ensure_ascii=False)
+        sorted_tokens = sorted(all_tokens.items())  
+
+        block_ranges = {}  
+        block_size = 1000  
+        current_block = []
+        current_block_norms = defaultdict(float)
+        block_index = 0
+
+        for token, posting_list in sorted_tokens:
+            current_block.append((token, posting_list))
+            for doc_id, _ in posting_list:
+                current_block_norms[doc_id] = combined_norms[doc_id]
+
+            if len(current_block) >= block_size:
+                block_file = os.path.join(self.pathTemp, f'bloque_{block_index}.json')
+                self.write_block(block_file, current_block, current_block_norms)
+                block_ranges[block_index] = (current_block[0][0], current_block[-1][0])
+                current_block = []
+                current_block_norms = defaultdict(float)
+                block_index += 1
+
+        if current_block:
+            block_file = os.path.join(self.pathTemp, f'bloque_{block_index}.json')
+            self.write_block(block_file, current_block, current_block_norms)
+            block_ranges[block_index] = (current_block[0][0], current_block[-1][0])
 
         end_time = time.perf_counter()
-        self.build_time += (end_time - start_time) #Sumo al tiempo de construcción del índice
+        self.build_time += (end_time - start_time) 
 
-    def cargarIndice(self):
-        with open(self.indexF, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            self.diccionario = defaultdict(list, data['diccionario'])
-            self.normas = {int(k): v for k, v in data['normas'].items()}
-
-    """
-    def calcularTFIDF(self, term, doc_id):
-        if term in self.tfidf_cache and doc_id in self.tfidf_cache[term]:
-            return self.tfidf_cache[term][doc_id]
-
-        term_postings = self.diccionario.get(term, [])
-        doc_freq = len(term_postings)
-        raw_tf = next((freq for doc, freq in term_postings if doc == doc_id), 0)
-        tf = 1 + np.log(raw_tf) if raw_tf > 0 else 0
-        idf = np.log(self.total_docs / (1 + doc_freq))
-        tfidf = tf * idf
-        self.tfidf_cache.setdefault(term, {})[doc_id] = tfidf
-        return tfidf
-
-    def binary_search(self, term):
-        keys_list = list(self.diccionario.keys())
-        i = bisect_left(keys_list, term)
-        if i != len(keys_list) and keys_list[i] == term:
-            return self.diccionario[term]
-        return None  
-
-    def similitudCoseno(self, query):
-        query_tokens = self.preProcesamiento(query)  # Preprocesamos la query
-        query_vector = Counter(query_tokens)  # TF de los tokens de la query
-        query_tfidf_vector = {}
-        query_norm = 0.0
-
-        # Obtener lista de archivos de bloque y términos en el diccionario
-        bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
-
-        # Iterar sobre términos de la consulta
-        for term, count in query_vector.items():
-            for bloque_file in bloque_files:  # TODO: Aprovechar que los bloques están ordenados e ir directamente al bloque del termino
-                with open(bloque_file, 'r', encoding='utf-8') as f:
-                    bloque_data = json.load(f)
-                    diccionario = bloque_data['diccionario']
-
-                    if term in diccionario:  # Si el término se encuentra en el bloque actual
-                        # Calcular IDF para el término
-                        idf = np.log(self.total_docs / (1 + len(self.diccionario[term])))
-                        query_tfidf = (1 + np.log(count)) * idf
-                        query_tfidf_vector[term] = query_tfidf
-                        query_norm += query_tfidf ** 2
-                        break  # Salir del bucle del bloque si ya encontramos el término
-
-        query_norm = np.sqrt(query_norm) if query_norm > 0 else 1.0
-
-        # Calcular la similitud de coseno
-        scores = defaultdict(float)
-        for term, query_tfidf in query_tfidf_vector.items():
-            normalized_query_tfidf = query_tfidf / query_norm
-            for bloque_file in bloque_files: #verifico
-                with open(bloque_file, 'r', encoding='utf-8') as f:
-                    bloque_data = json.load(f)
-                    diccionario = bloque_data['diccionario']
-                    if term in diccionario: # Si el término se encuentra en el bloque actual
-                        for doc_id, freq in self.diccionario[term]:
-                            if self.normas[doc_id] != 0:
-                                doc_tfidf = self.calcularTFIDF(term, doc_id)  # TF-IDF del documento
-                                normalized_doc_tfidf = doc_tfidf / np.sqrt(self.normas[doc_id])  # Normalización por la norma del documento
-                                scores[doc_id] += normalized_query_tfidf * normalized_doc_tfidf
-        return scores
-    """
+    def write_block(self, block_file, tokens, norms):
+        sorted_block = {
+            'diccionario': tokens,
+            'normas': norms
+        }
+        with open(block_file, 'w', encoding='utf-8') as file:
+            json.dump(sorted_block, file, ensure_ascii=False)
     
     def compute_tf_idf(self, tf, df):
         return tf * math.log(self.total_docs / (df + 1))  # Evitar división por cero
@@ -264,14 +218,16 @@ class SPIMI:
         print("relevant blocks: ", relevant_blocks)
         return relevant_blocks   
 
-    def get_docs(self, indexes):  #Retornar lineas especificas del csv
+    def get_docs(self, indexes):  # Retornar líneas específicas del CSV
         result = []
         with open(self.csv_path, 'r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file)  # Leer como diccionario
-            for i, row in enumerate(csv_reader): #Leo linea por linea (para no cargar todo el csv a RAM)
-                if i in indexes:  
-                    result.append(row)  
+            header_offset = 2  # Saltar header del csv
+            for i, row in enumerate(csv_reader, start=header_offset):  # Adjust the index to account for header
+                if i in indexes:
+                    result.append(row)
         return result
+
 
     def busqueda_topK(self, query, k=5): 
         start_time = time.perf_counter()
@@ -281,6 +237,8 @@ class SPIMI:
         top_k_results = sorted_scores[:k]
         print("top k results: ", top_k_results)
         
+        if len(top_k_results) == 0: 
+            return f"No results for the query {query}"
         doc_ids, similitud = zip(*top_k_results) #lista de ids de documento, lista de similitudes
 
         docs = self.get_docs(doc_ids) #diccionarios de cada uno de los documentos top k
@@ -291,7 +249,7 @@ class SPIMI:
                 'track_name': doc['track_name'],
                 'track_artist': doc['track_artist'],
                 'lyrics': doc['lyrics'][:10],
-                'row_position': doc_ids[i]+2, 
+                'row_position': doc_ids[i], 
                 'similitudCoseno': similitud[i]
             }
             results.append(result)
@@ -303,11 +261,9 @@ class SPIMI:
             'results': results
         }
 
-
 # Uso
 spimi = SPIMI(csv_path='./backend/data/spotify_songs_100.csv')
-
 # Busqueda
-query = 'hello enough'
+query = 'hello as always'
 result = spimi.busqueda_topK(query, k=5)
 print(result)
