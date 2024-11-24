@@ -116,15 +116,24 @@ class SPIMI:
                 term_postings[term] = [[int(doc_id), int(freq)] for doc_id, freq in postings]
 
         normas = {int(doc_id): np.sqrt(norm) for doc_id, norm in normas.items()}
-        sorted_term_postings = sorted(dict(term_postings).items(), key=lambda item: item[0])
-        
-        final_index = {
-            'diccionario': sorted_term_postings,
-            'normas': normas
-        }
-        with open(self.indexF, 'w', encoding='utf-8') as f:
-            json.dump(final_index, f, ensure_ascii=False)
-            
+        sorted_terms = sorted(term_postings.keys())
+        num_bloques = len(bloque_files)
+        terms_per_block = len(sorted_terms) // num_bloques + 1
+
+        for bloque_id in range(num_bloques):
+            start_idx = bloque_id * terms_per_block
+            end_idx = min((bloque_id + 1) * terms_per_block, len(sorted_terms))
+            block_terms = sorted_terms[start_idx:end_idx]
+            block_postings = {term: term_postings[term] for term in block_terms}
+
+            final_block = {
+                'diccionario': block_postings,
+                'normas': normas
+            }
+            block_file = os.path.join(self.pathTemp, f'index_bloque_{bloque_id}.json')
+            with open(block_file, 'w', encoding='utf-8') as f:
+                json.dump(final_block, f, ensure_ascii=False)
+
         for term_file in term_files.values():
             os.remove(term_file)
 
