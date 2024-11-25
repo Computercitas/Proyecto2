@@ -19,10 +19,9 @@ class PostgresConnector:
         self.cur = self.conn.cursor(cursor_factory=RealDictCursor)
         
     def setup_database(self):
-        # Crear schema si no existe
         self.cur.execute("CREATE SCHEMA IF NOT EXISTS db2;")
         
-        # Crear tabla
+        # Tabla
         create_table_query = """
         CREATE TABLE IF NOT EXISTS db2.spotify_songs (
             track_id VARCHAR PRIMARY KEY,
@@ -34,13 +33,13 @@ class PostgresConnector:
         """
         self.cur.execute(create_table_query)
         
-        # Crear índice GIN
+        # Índice GIN
         self.cur.execute("""
         CREATE INDEX IF NOT EXISTS idx_songs_search 
         ON db2.spotify_songs USING gin(search_vector);
         """)
         
-        # Crear función de actualización del vector
+        # Función de actualización del vector
         self.cur.execute("""
         CREATE OR REPLACE FUNCTION db2.update_search_vector()
         RETURNS trigger AS $$
@@ -54,7 +53,7 @@ class PostgresConnector:
         $$ LANGUAGE plpgsql;
         """)
         
-        # Crear trigger
+        # Trigger
         self.cur.execute("""
         DROP TRIGGER IF EXISTS trigger_search_vector ON db2.spotify_songs;
         CREATE TRIGGER trigger_search_vector
@@ -66,7 +65,6 @@ class PostgresConnector:
         self.conn.commit()
 
     def load_data(self, csv_path):
-        # Verificar si ya hay datos
         self.cur.execute("SELECT COUNT(*) FROM db2.spotify_songs")
         if self.cur.fetchone()['count'] > 0:
             print("Los datos ya están cargados")
@@ -82,56 +80,34 @@ class PostgresConnector:
         
         self.conn.commit()
 
-    def search(self, query, k=5):
+    def search(self, lyrics_fragment, k=5):
         start_time = time.time()
+        
+        clean_query = ' '.join(
+            word.strip() 
+            for word in lyrics_fragment.lower().split()
+        )
+        
+        # Convertir a formato tsquery
+        ts_query = ' | '.join(f"'{word}':*" for word in clean_query.split())
+
+        print(ts_query)
         
         search_query = """
         SELECT 
             track_id,
-            track_name,
+            track_name, 
             track_artist,
             lyrics,
             ctid::text as row_position,
-            ts_rank_cd(search_vector, plainto_tsquery('english', %s)) as similitud
+            ts_rank_cd(search_vector, to_tsquery('english', %s)) as similitud
         FROM db2.spotify_songs
-        WHERE search_vector @@ plainto_tsquery('english', %s)
+        WHERE search_vector @@ to_tsquery('english', %s)
         ORDER BY similitud DESC
         LIMIT %s;
         """
         
-        self.cur.execute(search_query, (query, query, k))
-        results = self.cur.fetchall()
-        
-        return {
-            'query_time': time.time() - start_time,
-            'results': results
-        }
-  
-    def search_lyrics(self, lyrics_fragment, k=5):
-        start_time = time.time()
-        
-        search_query = """
-        SELECT 
-            track_id,
-            track_name,
-            track_artist,
-            lyrics,
-            ctid::text as row_position,
-            ts_rank_cd(to_tsvector('english', lyrics), 
-                      plainto_tsquery('english', %s)) as similitud
-        FROM db2.spotify_songs
-        WHERE 
-            lyrics ILIKE %s 
-            OR lyrics @@ plainto_tsquery('english', %s)
-        ORDER BY similitud DESC
-        LIMIT %s;
-        """
-        
-        # Usar %% para escapar el % en ILIKE
-        lyrics_pattern = f'%{lyrics_fragment}%'
-        
-        self.cur.execute(search_query, 
-                        (lyrics_fragment, lyrics_pattern, lyrics_fragment, k))
+        self.cur.execute(search_query, (ts_query, ts_query, k))
         results = self.cur.fetchall()
         
         return {
@@ -152,24 +128,13 @@ class PostgresConnector:
 # db.load_data('../data/spotify_songs.csv')
 
 # # Búsqueda
-# results = db.search('love', 10)
+# results = db.search("heart just to keep you safe For you, anything for you With you, all the years just fade away Like a dream in my arms", 3)
 # for result in results['results']:
-#     print(f"Canción: {result['track_name']}")
-#     print(f"Artista: {result['track_artist']}")
-#     print(f"Similitud: {result['similitud']}")
-#     print("---")
-
-# Ejemplo de uso:
-"""
-# Buscar fragmento de letra
-results = db.search_lyrics("Two kids with their hearts on fire Who's gonna save us now? When we thought", 10)
-for result in results['results']:
-		print(f"ID de la canción: {result['track_id']}")
-		print(f"Nombre de la canción: {result['track_name']}")
-		print(f"Artista: {result['track_artist']}")
-		# print(f"Letras: {result['lyrics']}")
-		print(f"Posición de la fila: {result['row_position']}")
-		print(f"Similitud: {result['similitud']}")
-		print("---")
-"""
+# 		print(f"ID de la canción: {result['track_id']}")
+# 		print(f"Nombre de la canción: {result['track_name']}")
+# 		print(f"Artista: {result['track_artist']}")
+# 		# print(f"Letras: {result['lyrics']}")
+# 		print(f"Posición de la fila: {result['row_position']}")
+# 		print(f"Similitud: {result['similitud']}")
+# 		print("---")
 
