@@ -22,21 +22,35 @@ nltk.download('stopwords')
 class SPIMI:
     def __init__(self, csv_path, pathTemp='indice'):
         self.csv_path = csv_path
-        self.mb_per_block = 4 * 1024            # MBs por bloque 
+        self.mb_per_block = 4 * 1024 * 128 # 4MB por bloque 
         self.total_docs = self.count_csv_rows() # Total de documentos (filas)
         self.pathTemp = pathTemp                # Path para guardar los bloques/índices/hacer merge
         self.stop_words = set(stopwords.words('spanish')).union(set(stopwords.words('english'))) 
         self.stemmer = SnowballStemmer('english')
         self.build_time = 0  # Para medir el tiempo de construcción del índice
-        self.normas_docs = {}
+        self.normas_docs = defaultdict(float)
         if not os.path.exists(self.pathTemp): #Verifico si ya tengo una carpeta con índices
             os.makedirs(self.pathTemp)
             self.construirSpimi(self.mb_per_block)
             self.merge()
             print("Tiempo de construcción del índice para ", self.total_docs, " documentos: ", round(self.build_time, 2)*1000, "ms")
         else: 
+            self.load_norms()
             print("Reutilizando índice para ", csv_path, " con ", self.total_docs, " filas")
             #Borrar la carpeta indice si es que quieres probar con un csv diferente, para que se genere el índice denuevo
+
+    def borrar_indice(self):
+        for file in os.listdir(self.pathTemp):
+            file_path = os.path.join(self.pathTemp, file)
+            if os.path.isfile(file_path):
+                os.remove(file_path) 
+        os.rmdir(self.pathTemp)
+
+    def load_norms(self):
+        with open('./backend/normas.json', 'r', encoding='utf-8') as file:
+            data = json.load(file)
+            self.normas_docs = {int(k): v for k, v in data.items()}
+
 
     def count_csv_rows(self): #Calcular total de documentos (sin cargar todo el csv en la RAM)
         with open(self.csv_path, 'r', encoding='utf-8') as file:
@@ -89,9 +103,10 @@ class SPIMI:
                     for term, freq in tokens.items():
                         diccionario[term].append([i, freq])  # i es el docId (línea que estamos leyendo)
                         normas[str(i)] += freq ** 2
+                        self.normas_docs[i] += freq ** 2 
+                        
 
             bloque_data = {'diccionario': dict(diccionario), 'normas': dict(normas)}  # Concateno normas e índice invertido
-
             # Guardar bloque en un archivo JSON
             bloque_path = os.path.join(self.pathTemp, f'bloque_{block_number}.json')
             with open(bloque_path, 'w', encoding='utf-8') as f:
@@ -104,6 +119,9 @@ class SPIMI:
             # Si no llegué a llenar el bloque, significa que ya no hay más documentos que leer.
             if sys.getsizeof(diccionario) + sys.getsizeof(normas) < limite_mb_bloque:
                 break
+        
+        with open('./backend/normas.json', 'w', encoding='utf-8') as f: #guardar normas en un json
+            json.dump(self.normas_docs, f, ensure_ascii=False)
 
         end_time = time.perf_counter()
         self.build_time = end_time - start_time # Le voy a sumar el merge a esto, ya que es parte de la construcción
@@ -191,25 +209,26 @@ class SPIMI:
                 tf_idf_query[token] = self.compute_tf_idf(tf, df) 
             else:
                 tf_idf_query[token] = 0  
+        #normalizar la query
+        norm_query = math.sqrt(sum(tf_idf_query[token] ** 2 for token in query_tokens if tf_idf_query[token] > 0)) 
 
         # 4.2 TF-IDF para los documentos relevantes que encontramos
         tf_idf_docs = defaultdict(float)
         for token, postings in posting_lists.items():
             for doc_id, tf in postings:
                 df = len(postings)  
-                tf_idf_docs[doc_id] += self.compute_tf_idf(tf, df) * tf_idf_query[token]  
-
+                tf_idf_docs[doc_id] += self.compute_tf_idf(tf, df) * tf_idf_query[token]             
+     
         # 5. Normalización y similitud <----- ARREGLAR!!
         final_scores = {}
-        norm_query = math.sqrt(sum(tf_idf_query[token] ** 2 for token in query_tokens if tf_idf_query[token] > 0))  
-        for doc_id, score in tf_idf_docs.items():
+        for doc_id, score in tf_idf_docs.items(): #tf_idf_docs son los documentos relevantes nomás, no todos.
             if doc_id in self.normas_docs:  
                 norm_doc = math.sqrt(self.normas_docs[doc_id]) 
                 cosine_similarity = score / (norm_query * norm_doc) if norm_query * norm_doc > 0 else 0
                 final_scores[doc_id] = cosine_similarity
             else:
-                print(f"Warning: Document {doc_id} missing in normas_docs.") #Puse este warning pk no se que hacer xd
-
+                print(f"Warning: Document {doc_id} missing in normas_docs.") 
+        
         # 6. Ordenar y devolver los top-k resultados
         top_k = sorted(final_scores.items(), key=lambda x: x[1], reverse=True)[:k]
         return top_k
@@ -217,6 +236,7 @@ class SPIMI:
     def get_relevant_blocks(self, query_tokens): # Itero sobre cada bloque para ver si contiene palabras de la query
         bloque_files = [os.path.join(self.pathTemp, f) for f in os.listdir(self.pathTemp) if f.endswith('.json')]
         relevant_blocks = []
+
         for bloque_file in bloque_files: # Para cada archivo dentro de la carpeta donde están los bloques
             with open(bloque_file, 'r', encoding='utf-8') as f:
                 bloque_data = json.load(f)
@@ -224,17 +244,17 @@ class SPIMI:
                 if any(token in diccionario for token in query_tokens):
                     relevant_blocks.append(bloque_file)
 
-        print("relevant blocks: ", relevant_blocks)
+        #print("relevant blocks: ", relevant_blocks)
         return relevant_blocks   
 
-    def get_docs(self, indexes):  # Retornar líneas específicas del CSV
-        result = []
+    def get_docs(self, indexes): # Recuperar lineas especificas del csv, sin abrirlo todo
+        index_set = set(indexes)  # Para poder mantener el top k en el mismo orden
+        result = {}
         with open(self.csv_path, 'r', encoding='utf-8') as file:
-            csv_reader = csv.DictReader(file)  # Leer como diccionario
-            header_offset = 2  # Ajustar offset (header + 1)
-            for i, row in enumerate(csv_reader, start=header_offset): 
-                if i in indexes:
-                    result.append(row)
+            csv_reader = csv.DictReader(file)
+            for i, row in enumerate(csv_reader):
+                if i in index_set:
+                    result[i] = row  
         return result
 
 
@@ -242,29 +262,28 @@ class SPIMI:
         start_time = time.perf_counter() # Para calcular tiempo de búsqueda
 
         scores = self.similitudCoseno(query, k)
-
-        # Por alguna razón mi top_k está saliendo vacio, creo que es por la normalización y similitud (similitudCoseno())
-
-
         top_k_results = sorted(scores, key=lambda score: score[1], reverse=True)
-        print("top k results: ", top_k_results)
         
         if len(top_k_results) == 0: 
             return f"No results for the query {query}"
-        doc_ids, similitud = zip(*top_k_results) #lista de ids de documento, lista de similitudes
+        
+        doc_ids = [pair[0]-2 for pair in top_k_results] #extraer solo el doc id para buscar en el csv
+        docs = self.get_docs(doc_ids) #documentos topk 
 
-        docs = self.get_docs(doc_ids) #diccionarios de cada uno de los documentos top k
         results = []
-        for i, doc in enumerate(docs):
+        j = 0
+        for i in doc_ids:
+            csv_row = docs[i]
             result = {
-                'track_id': doc['track_id'],
-                'track_name': doc['track_name'],
-                'track_artist': doc['track_artist'],
-                'lyrics': doc['lyrics'][:10],
-                'row_position': doc_ids[i], 
-                'similitudCoseno': similitud[i]
+                'track_id': csv_row['track_id'],
+                'track_name': csv_row['track_name'],
+                'track_artist': csv_row['track_artist'],
+                'lyrics': csv_row['lyrics'],
+                'row_position': i+2, 
+                'similitudCoseno': top_k_results[j][1]
             }
             results.append(result)
+            j+=1
 
         end_time = time.perf_counter()
 
@@ -274,10 +293,10 @@ class SPIMI:
         }
         
 # Uso
-spimi = SPIMI(csv_path='./backend/data/spotify_songs_100.csv')
+spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
 #Si la carpeta indice no existe se van a generar los índices. Caso contrario reutiliza los índices existentes
 
 # Busqueda
-query = 'hello always'
+query = 'love'
 result = spimi.busqueda_topK(query, k=5)
 print(result)
