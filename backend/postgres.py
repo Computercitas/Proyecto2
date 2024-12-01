@@ -85,34 +85,29 @@ class PostgresConnector:
         
         self.conn.commit()
 
-    def search(self, lyrics_fragment, k=5):
+    def search(self, query, k=5):
         start_time = time.time()
         
-        clean_query = ' '.join(
-            word.strip() 
-            for word in lyrics_fragment.lower().split()
-        )
+        clean_query = query.lower()
         
-        # Convertir a formato tsquery
         ts_query = ' | '.join(f"'{word}':*" for word in clean_query.split())
-
-        print(ts_query)
+        # print(ts_query)
         
         search_query = """
-        SELECT 
-            track_id,
-            track_name, 
-            track_artist,
-            lyrics,
-            ctid::text as row_position,
-            ts_rank_cd(search_vector, to_tsquery('english', %s)) as similitud
-        FROM db2.spotify_songs
-        WHERE search_vector @@ to_tsquery('english', %s)
-        ORDER BY similitud DESC
-        LIMIT %s;
-        """
-        
-        self.cur.execute(search_query, (ts_query, ts_query, k))
+                SELECT 
+                    track_id,
+                    track_name, 
+                    track_artist,
+                    lyrics,
+                    ctid::text as row_position,
+                    ts_rank_cd(search_vector, to_tsquery('english', %s) || to_tsquery('spanish', %s)) as similitud
+                FROM db2.spotify_songs
+                WHERE search_vector @@ (to_tsquery('english', %s) || to_tsquery('spanish', %s))
+                ORDER BY similitud DESC
+                LIMIT %s;
+                """
+
+        self.cur.execute(search_query, (ts_query, ts_query, ts_query, ts_query, k))
         results = self.cur.fetchall()
         
         return {
@@ -126,20 +121,20 @@ class PostgresConnector:
         if hasattr(self, 'conn'):
             self.conn.close()
 
-# Uso
+# # Uso
 
-db = PostgresConnector()
-db.setup_database()
-db.load_data('./data/spotify_songs.csv')
+# db = PostgresConnector()
+# db.setup_database()
+# db.load_data('./data/spotify_songs.csv')
 
-# Búsqueda
-results = db.search("oh mi amor", 5)
-for result in results['results']:
-		print(f"ID de la canción: {result['track_id']}")
-		print(f"Nombre de la canción: {result['track_name']}")
-		print(f"Artista: {result['track_artist']}")
-		# print(f"Letras: {result['lyrics']}")
-		print(f"Posición de la fila: {result['row_position']}")
-		print(f"Similitud: {result['similitud']}")
-		print("---")
+# # Búsqueda
+# results = db.search("amor no es amor sin amor", 5)
+# for result in results['results']:
+# 		print(f"ID de la canción: {result['track_id']}")
+# 		print(f"Nombre de la canción: {result['track_name']}")
+# 		print(f"Artista: {result['track_artist']}")
+# 		# print(f"Letras: {result['lyrics']}")
+# 		print(f"Posición de la fila: {result['row_position']}")
+# 		print(f"Similitud: {result['similitud']}")
+# 		print("---")
 
