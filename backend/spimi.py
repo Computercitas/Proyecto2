@@ -73,6 +73,17 @@ class SPIMI:
         """
         tokens = [self.stemmer.stem(word) for word in tokens if word not in self.stop_words and word.isalpha()]
         return tokens
+    
+
+    def compute_log_tf(self, tf):
+        """Calcula el TF logarítmico: 1 + log10(tf)"""
+        return 1 + math.log10(tf) if tf > 0 else 0
+
+    def compute_tf_idf(self, tf, df):
+        """Calcula TF-IDF usando TF logarítmico"""
+        log_tf = self.compute_log_tf(tf)
+        idf = math.log10(self.total_docs / (df + 1))
+        return log_tf * idf
 
     def construirSpimi(self, limite_mb_bloque): 
         start_time = time.perf_counter() # Medir tiempo de construcción
@@ -99,14 +110,12 @@ class SPIMI:
                     if sys.getsizeof(diccionario) + sys.getsizeof(normas) >= limite_mb_bloque:  # Verificar si queda espacio en el bloque
                         break
                     
-                    preprocessed_text = self.preProcesamiento(row[3])
-                    tokens = Counter(preprocessed_text)  # Preprocesar la letra (cuarta columna) y contar frecuencia
-                    doc_len = len(preprocessed_text)
+                    tokens = Counter(self.preProcesamiento(row[3]))  # Preprocesar la letra (cuarta columna) y contar frecuencia
                     for term, freq in tokens.items():
-                        tf = freq/doc_len
-                        diccionario[term].append([i, tf])  # i es el docId (línea que estamos leyendo)
-                        normas[str(i)] += freq ** 2
-                        self.normas_docs[i] += freq ** 2 
+                        log_tf = self.compute_log_tf(freq)
+                        diccionario[term].append([i, freq])  # i es el docId (línea que estamos leyendo)
+                        normas[str(i)] += log_tf ** 2
+                        self.normas_docs[i] += log_tf ** 2 
                         
 
             bloque_data = {'diccionario': dict(diccionario), 'normas': dict(normas)}  # Concateno normas e índice invertido
@@ -154,7 +163,7 @@ class SPIMI:
         for term, file_path in term_files.items():
             with open(file_path, 'r', encoding='utf-8') as f:
                 postings = [line.strip().split(':') for line in f]
-                term_postings[term] = [[int(float(doc_id)), int(float(freq))] for doc_id, freq in postings]
+                term_postings[term] = [[int(doc_id), int(freq)] for doc_id, freq in postings]
 
         normas = {int(doc_id): np.sqrt(norm) for doc_id, norm in normas.items()}
         sorted_terms = sorted(term_postings.keys())
@@ -179,9 +188,6 @@ class SPIMI:
 
         for term_file in term_files.values():
             os.remove(term_file)
-    
-    def compute_tf_idf(self, tf, df):
-        return tf * math.log10(self.total_docs / (df + 1))  # +1 para no dividir por cero
     
     def similitudCoseno(self, query, k):
         # 1. Preprocesar la query
@@ -218,10 +224,11 @@ class SPIMI:
         # 4.2 TF-IDF para los documentos relevantes que encontramos
         tf_idf_docs = defaultdict(float)
         for token, postings in posting_lists.items():
+            df = len(postings)  # cambio de lugar
             for doc_id, tf in postings:
                 tf_idf_docs[doc_id] += self.compute_tf_idf(tf, df) * tf_idf_query[token]             
      
-        # 5. Normalización y similitud <----- ARREGLAR!!
+        # 5. Normalización y similitud
         final_scores = {}
         for doc_id, score in tf_idf_docs.items(): #tf_idf_docs son los documentos relevantes nomás, no todos.
             if doc_id in self.normas_docs:  
@@ -277,10 +284,10 @@ class SPIMI:
         for i in doc_ids:
             csv_row = docs[i]
             result = {
-                #'track_id': csv_row['track_id'],
+                'track_id': csv_row['track_id'],
                 'track_name': csv_row['track_name'],
-                #'track_artist': csv_row['track_artist'],
-                #'lyrics': csv_row['lyrics'],
+                'track_artist': csv_row['track_artist'],
+                'lyrics': csv_row['lyrics'],
                 'row_position': i+2, 
                 'similitudCoseno': top_k_results[j][1]
             }
@@ -295,10 +302,10 @@ class SPIMI:
         }
         
 # Uso
-spimi = SPIMI(csv_path='./backend/data/spotify_songs_100.csv')
+spimi = SPIMI(csv_path='./backend/data/spotify_songs.csv')
 #Si la carpeta indice no existe se van a generar los índices. Caso contrario reutiliza los índices existentes
 
 # Busqueda
-query = 'hola'
+query = 'hello'
 result = spimi.busqueda_topK(query, k=5)
 print(result)
