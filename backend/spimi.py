@@ -99,7 +99,6 @@ class SPIMI:
 
         while True:  # Creo bloques hasta leer todo el csv
             diccionario = defaultdict(list)  # Índice invertido (diccionario con tokens, frecuencias y IDs de documento)
-            normas = defaultdict(float)      # Diccionario de normas
             
             with open(self.csv_path, mode='r', encoding='utf-8') as file:
                 reader = csv.reader(file)    # Iterador para leer línea por línea
@@ -107,29 +106,27 @@ class SPIMI:
                     next(reader, None)
 
                 for i, row in enumerate(reader, start=start_line + 1):  # Continúa desde la última línea leída
-                    if sys.getsizeof(diccionario) + sys.getsizeof(normas) >= limite_mb_bloque:  # Verificar si queda espacio en el bloque
+                    if sys.getsizeof(diccionario) >= limite_mb_bloque:  # Verificar si queda espacio en el bloque
                         break
                     
                     tokens = Counter(self.preProcesamiento(row[3]))  # Preprocesar la letra (cuarta columna) y contar frecuencia
                     for term, freq in tokens.items():
                         log_tf = self.compute_log_tf(freq)
                         diccionario[term].append([i, freq])  # i es el docId (línea que estamos leyendo)
-                        normas[str(i)] += log_tf ** 2
                         self.normas_docs[i] += log_tf ** 2 
                         
 
-            bloque_data = {'diccionario': dict(diccionario), 'normas': dict(normas)}  # Concateno normas e índice invertido
             # Guardar bloque en un archivo JSON
             bloque_path = os.path.join(self.pathTemp, f'bloque_{block_number}.json')
             with open(bloque_path, 'w', encoding='utf-8') as f:
-                json.dump(bloque_data, f, ensure_ascii=False)
+                json.dump(diccionario, f, ensure_ascii=False)
 
             # Preparar para el siguiente bloque
             start_line = i + 1  # Continuar desde la última línea leída
             block_number += 1
 
             # Si no llegué a llenar el bloque, significa que ya no hay más documentos que leer.
-            if sys.getsizeof(diccionario) + sys.getsizeof(normas) < limite_mb_bloque:
+            if sys.getsizeof(diccionario) < limite_mb_bloque:
                 break
         
         with open('./backend/normas.json', 'w', encoding='utf-8') as f: #guardar normas en un json
@@ -146,8 +143,7 @@ class SPIMI:
         for bloque_file in bloque_files:
             with open(bloque_file, 'r', encoding='utf-8') as f:
                 bloque_data = json.load(f)
-                diccionario = bloque_data['diccionario']
-                bloque_normas = bloque_data['normas']
+                diccionario = bloque_data
 
                 for term, postings in diccionario.items():
                     if term not in term_files:
@@ -156,8 +152,8 @@ class SPIMI:
                         for posting in postings:
                             term_file.write(f"{posting[0]}:{posting[1]}\n")
 
-            for doc_id, norm in bloque_normas.items():
-                normas[int(doc_id)] += norm
+            for doc_id, norm in self.normas_docs.items():
+                normas[int(doc_id)] += norm 
 
         term_postings = defaultdict(list)
         for term, file_path in term_files.items():
@@ -176,13 +172,10 @@ class SPIMI:
             block_terms = sorted_terms[start_idx:end_idx]
             block_postings = {term: term_postings[term] for term in block_terms}
 
-            final_block = {
-                'diccionario': block_postings,
-                'normas': normas
-            }
+
             block_file = os.path.join(self.pathTemp, f'index_bloque_{bloque_id}.json')
             with open(block_file, 'w', encoding='utf-8') as f:
-                json.dump(final_block, f, ensure_ascii=False)
+                json.dump(block_postings, f, ensure_ascii=False)
             
             os.remove(os.path.join(self.pathTemp, f'bloque_{bloque_id}.json')) # Remover block files originales
 
@@ -202,11 +195,11 @@ class SPIMI:
             for bloque in bloques_relevantes:  # itero solo sobre bloques relevantes
                 with open(bloque, 'r', encoding='utf-8') as f:
                     bloque_data = json.load(f)
-                    diccionario = dict(bloque_data['diccionario']) # Cargar las palabras del bloque a un diccionario
-                    if token in diccionario:  # si el token está en el diccionario (solo de ese bloque)
+                     # Cargar las palabras del bloque a un diccionario
+                    if token in bloque_data:  # si el token está en el diccionario (solo de ese bloque)
                         if token not in posting_lists: 
                             posting_lists[token] = []
-                        posting_lists[token].extend(diccionario[token]) # Esto es para casos donde tengo una palabra más de una vez en query
+                        posting_lists[token].extend(bloque_data[token]) # Esto es para casos donde tengo una palabra más de una vez en query
 
         # 4. Calcular TF-IDF
         # 4.1 TF-IDF para la query
@@ -249,8 +242,7 @@ class SPIMI:
         for bloque_file in bloque_files: # Para cada archivo dentro de la carpeta donde están los bloques
             with open(bloque_file, 'r', encoding='utf-8') as f:
                 bloque_data = json.load(f)
-                diccionario = dict(bloque_data['diccionario']) # Traigo los índices de ese bloque
-                if any(token in diccionario for token in query_tokens):
+                if any(token in bloque_data for token in query_tokens):
                     relevant_blocks.append(bloque_file)
 
         #print("relevant blocks: ", relevant_blocks)
