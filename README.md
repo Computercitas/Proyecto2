@@ -316,3 +316,89 @@ Para ejecutar el frontend localmente, sigue estos pasos:
   ```
 
 ## Pruebas Experimentales
+
+### Configuración del Experimento
+
+Se realizaron pruebas comparativas entre dos implementaciones de búsqueda:
+1. PostgreSQL con índices GIN y vectores tsvector
+2. Implementación propia SPIMI en memoria secundaria
+
+Las pruebas consistieron en:
+- Conjuntos de datos de diferentes tamaños: 1000, 2000, 4000, 8000, 16000, 32000 y 64000 registros
+- Dos consultas de prueba: 
+  - Query simple: "love"
+  - Query compuesta: "in the house tonight"
+- 3 iteraciones por cada combinación de tamaño y consulta
+- Medición de tiempos de respuesta en milisegundos
+
+### Resultados
+
+![Gráfica comparativa](./imgs/comparison_queries.png)
+
+#### Comparación de Rendimiento
+
+PostgreSQL demostró un rendimiento significativamente superior en ambos tipos de consultas:
+
+1. **Query Simple "love"**:
+   - PostgreSQL: 
+     - Con 1K registros: 19.38ms
+     - Con 64K registros: 569.24ms
+     - Factor de crecimiento: ~29x
+   - SPIMI:
+     - Con 1K registros: 186.26ms 
+     - Con 64K registros: 5848.63ms
+     - Factor de crecimiento: ~31x
+
+   **Análisis**: Para la consulta simple, PostgreSQL mantuvo tiempos de respuesta hasta 10 veces más rápidos que SPIMI. 
+   El crecimiento en tiempo de ejecución fue más controlado en PostgreSQL, mostrando mejor escalabilidad.
+   La diferencia más notable se observó en conjuntos grandes (64K), donde PostgreSQL procesó la consulta en ~0.57 segundos vs 5.85 segundos de SPIMI.
+
+2. **Query Compuesta "in the house tonight"**:
+   - PostgreSQL:
+     - Con 1K registros: 10.66ms
+     - Con 64K registros: 226.46ms
+     - Factor de crecimiento: ~21x
+   - SPIMI:
+     - Con 1K registros: 138.76ms
+     - Con 64K registros: 5989.17ms
+     - Factor de crecimiento: ~43x
+
+   **Análisis**: En consultas compuestas, la diferencia fue aún más marcada:
+   - PostgreSQL mostró mejor rendimiento con consultas compuestas que con simples
+   - SPIMI experimentó una degradación más severa al procesar múltiples términos
+   - La optimización de índices GIN en PostgreSQL demostró ser especialmente efectiva para consultas multi-término
+
+**Observaciones clave**:
+- PostgreSQL mantiene tiempos sub-segundo incluso con 64K registros
+- SPIMI muestra degradación más pronunciada al aumentar la complejidad de la consulta
+- La brecha de rendimiento se amplía significativamente con el aumento del tamaño de datos
+- El factor de crecimiento más controlado en PostgreSQL indica mejor manejo de recursos y optimización
+
+### Análisis de Resultados
+
+1. **Ventajas de PostgreSQL**:
+   - Uso eficiente de índices GIN (Generalized Inverted Index)
+   - Vectores tsvector precomputados y optimizados
+   - Motor de base de datos maduro con optimizaciones internas
+   - Mejor manejo de memoria y caché
+
+2. **Limitaciones de SPIMI**:
+   - Overhead por lectura/escritura de archivos JSON en disco
+   - Procesamiento secuencial de bloques
+   - Mayor costo en cálculos de similitud coseno
+
+3. **Escalabilidad**:
+   - PostgreSQL muestra un crecimiento más controlado en tiempos de respuesta
+   - SPIMI exhibe un crecimiento más pronunciado al aumentar el tamaño de datos
+
+### Conclusiones
+
+1. PostgreSQL demuestra ser significativamente más eficiente para búsquedas textuales, con tiempos de respuesta hasta 10 veces más rápidos que SPIMI.
+
+2. La diferencia de rendimiento se amplía conforme aumenta el tamaño de datos, evidenciando mejor escalabilidad de PostgreSQL.
+
+3. Las optimizaciones internas de PostgreSQL (índices GIN, vectores tsvector) superan la implementación básica de SPIMI en memoria secundaria.
+
+4. Para aplicaciones en producción que requieran búsqueda de texto eficiente, PostgreSQL representa una opción más robusta y escalable.
+
+
