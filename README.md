@@ -76,21 +76,139 @@ Si el archivo de índice ya existe el `SPIMI` solo lo utiliza. No necesita crear
 
 ## 2. Integración con PostgreSQL
 
-La clase `PostgresConnector` se encarga de manejar la conexión y las operaciones con una base de datos PostgreSQL. Esta clase facilita la carga de datos, la configuración de la base de datos y la realización de búsquedas eficientes utilizando índices GIN y vectores de búsqueda. A continuación, se describen los métodos principales y su uso:
+### 2.1 Descripción General
 
-### Métodos Principales
+La clase `PostgresConnector` se encarga de manejar la conexión y las operaciones con una base de datos PostgreSQL. Esta clase facilita la carga de datos, la configuración de la base de datos y la realización de búsquedas eficientes utilizando índices GIN y vectores de búsqueda. 
 
-- **`connect`**: Conecta a la base de datos utilizando los parámetros de conexión proporcionados.
-- **`setup_database`**: Configura la base de datos creando el esquema necesario, la tabla `spotify_songs`, el índice GIN para búsquedas de texto completo, la función `update_search_vector` para actualizar el vector de búsqueda y el trigger correspondiente.
-- **`load_data`**: Carga datos desde un archivo CSV a la tabla `spotify_songs`. Antes de cargar los datos, verifica si ya existen datos en la tabla para evitar duplicados.
-- **`search`**: Realiza una búsqueda en la tabla `spotify_songs` utilizando un vector de búsqueda. Devuelve los resultados ordenados por similitud en orden descendente. Los parámetros incluyen:
-  - `query` (str): La consulta de búsqueda.
-  - `k` (int): Número de resultados a devolver (por defecto 5).
-  - Retorna un diccionario con el tiempo de consulta y los resultados.
-- **`search_lyrics`**: Realiza una búsqueda en la tabla `spotify_songs` basada en un fragmento de letras. Devuelve los resultados ordenados por similitud en orden descendente. Los parámetros incluyen:
-  - `lyrics_fragment` (str): Fragmento de letras para buscar.
-  - `k` (int): Número de resultados a devolver (por defecto 5).
-  - Retorna un diccionario con el tiempo de consulta y los resultados.
+La implementación maneja la funcionalidad para:
+- Gestionar conexiones a PostgreSQL
+- Configurar la estructura de la base de datos
+- Realizar búsquedas optimizadas usando índices GIN y vectores tsvector
+- Cargar y mantener los datos de canciones
+
+### 2.2 Estructura de la Base de Datos
+
+```sql
+CREATE TABLE spotify_songs (
+    track_id VARCHAR PRIMARY KEY,
+    track_name VARCHAR, 
+    track_artist VARCHAR,
+    lyrics TEXT,
+    search_vector tsvector
+);
+```
+El campo `search_vector` es crucial para la búsqueda optimizada, almacenando el texto procesado en formato vectorial.
+
+### 2.3 Componentes Principales
+
+#### Conexión y Configuración
+
+```python
+def connect(self):
+    self.conn = pg.connect(
+        user="edd",
+        password="***",
+        host="localhost",
+        database="spotify_songs"
+    )
+```
+
+#### Índices y Optimización
+- Implementación de índice GIN para búsquedas de texto completo
+- Vector de búsqueda tsvector con pesos por campo
+- Trigger automático para mantener vectores actualizados
+
+#### Carga de Datos
+- Verificación de datos existentes para evitar duplicados
+- Procesamiento de archivos CSV
+- Actualización automática de vectores de búsqueda
+
+### 2.4 Funcionalidad de Búsqueda
+#### Método Principal de Búsqueda
+
+```python
+def search(self, query, k=5):
+    # Preprocesamiento de query
+    # Búsqueda usando ts_rank_cd
+    # Ordenamiento por similitud
+    return {
+        'query_time': tiempo_ejecución,
+        'results': resultados_ordenados
+    }
+```
+#### Características
+- Búsqueda por similitud usando ts_rank_cd
+- Soporte para consultas parciales
+- Resultados ordenados por relevancia
+- Límite configurable de resultados (top-k)
+
+### 2.5 Uso del Sistema
+```python
+# Inicialización
+db = PostgresConnector()
+db.setup_database()
+
+# Carga de datos
+db.load_data('./data/spotify_songs.csv')
+
+# Ejemplo de búsqueda
+resultados = db.search("love", k=5)
+```
+
+### 2.6 Detalles de Implementación
+
+#### Vectorización y Búsqueda
+
+El sistema implementa una búsqueda vectorial sofisticada mediante tsvector:
+
+```sql
+CREATE OR REPLACE FUNCTION update_search_vector()
+RETURNS trigger AS $$
+BEGIN
+    NEW.search_vector = 
+        setweight(to_tsvector('english', COALESCE(NEW.track_id,'')) || 
+                to_tsvector('spanish', COALESCE(NEW.track_id,'')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.track_name,'')) || 
+                to_tsvector('spanish', COALESCE(NEW.track_name,'')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.lyrics,'')) || 
+                to_tsvector('spanish', COALESCE(NEW.lyrics,'')), 'D');
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+#### Sistema de Ranking
+La búsqueda utiliza `ts_rank_cd` para calcular la relevancia:
+
+```sql
+SELECT 
+    track_name,
+    track_artist,
+    ts_rank_cd(search_vector, query_vector) as similitud
+FROM spotify_songs
+WHERE search_vector @@ query_vector
+ORDER BY similitud DESC
+```
+
+### 2.7 Ejemplos de Uso
+Búsqueda 
+```python
+# Buscar canciones con la palabra "love"
+results = db.search("love", k=5)
+
+# Ejemplo de resultado
+{
+    'query_time': 0.0234,
+    'results': [
+        {
+            'track_name': 'All You Need Is Love',
+            'track_artist': 'The Beatles',
+            'similitud': 0.89
+        },
+        # ... más resultados
+    ]
+}
+```
 
 ## 3. API
 
