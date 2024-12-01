@@ -6,11 +6,11 @@ import time
 class PostgresConnector:
     def __init__(self):
         self.connection_params = {
-            "user": "postgres",
-            "password": "Ut3c-4536",
+            "user": "edd",
+            "password": "PlatoN03",
             "host": "localhost",
-            "port": "5433",
-            "database": "ProyectoFinalBD2"
+            "port": "5432",
+            "database": "edd_db"
         }
         self.connect()
         
@@ -41,16 +41,21 @@ class PostgresConnector:
         
         # Función de actualización del vector
         self.cur.execute("""
-        CREATE OR REPLACE FUNCTION db2.update_search_vector()
-        RETURNS trigger AS $$
-        BEGIN
-            NEW.search_vector = 
-                setweight(to_tsvector('english', COALESCE(NEW.track_name,'')), 'A') ||
-                setweight(to_tsvector('english', COALESCE(NEW.track_artist,'')), 'B') ||
-                setweight(to_tsvector('english', COALESCE(NEW.lyrics,'')), 'C');
-            RETURN NEW;
-        END;
-        $$ LANGUAGE plpgsql;
+            CREATE OR REPLACE FUNCTION db2.update_search_vector()
+            RETURNS trigger AS $$
+            BEGIN
+                NEW.search_vector = 
+                    setweight(to_tsvector('english', COALESCE(NEW.track_id,'')) || 
+                            to_tsvector('spanish', COALESCE(NEW.track_id,'')), 'A') ||
+                    setweight(to_tsvector('english', COALESCE(NEW.track_name,'')) || 
+                            to_tsvector('spanish', COALESCE(NEW.track_name,'')), 'B') ||
+                    setweight(to_tsvector('english', COALESCE(NEW.track_artist,'')) || 
+                            to_tsvector('spanish', COALESCE(NEW.track_artist,'')), 'C') ||
+                    setweight(to_tsvector('english', COALESCE(NEW.lyrics,'')) || 
+                            to_tsvector('spanish', COALESCE(NEW.lyrics,'')), 'D');
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
         """)
         
         # Trigger
@@ -123,18 +128,18 @@ class PostgresConnector:
 
 # Uso
 
-# db = PostgresConnector()
-# db.setup_database()
-# db.load_data('../data/spotify_songs.csv')
+db = PostgresConnector()
+db.setup_database()
+db.load_data('./data/spotify_songs.csv')
 
-# # Búsqueda
-# results = db.search("heart just to keep you safe For you, anything for you With you, all the years just fade away Like a dream in my arms", 3)
-# for result in results['results']:
-# 		print(f"ID de la canción: {result['track_id']}")
-# 		print(f"Nombre de la canción: {result['track_name']}")
-# 		print(f"Artista: {result['track_artist']}")
-# 		# print(f"Letras: {result['lyrics']}")
-# 		print(f"Posición de la fila: {result['row_position']}")
-# 		print(f"Similitud: {result['similitud']}")
-# 		print("---")
+# Búsqueda
+results = db.search("oh mi amor", 5)
+for result in results['results']:
+		print(f"ID de la canción: {result['track_id']}")
+		print(f"Nombre de la canción: {result['track_name']}")
+		print(f"Artista: {result['track_artist']}")
+		# print(f"Letras: {result['lyrics']}")
+		print(f"Posición de la fila: {result['row_position']}")
+		print(f"Similitud: {result['similitud']}")
+		print("---")
 
