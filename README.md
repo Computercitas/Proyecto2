@@ -62,15 +62,14 @@ query = 'hello'
 result = spimi.busqueda_topK(query, k=5)
 print(result)
 ```
+Definimos bloques de entre 2-4MB para guardar el índice invertido, llamados `index_bloque_0`, `index_bloque_1`, ... Con la siguiente estructura:
 
-El índice invertido final ordenado alfabeticamente es generado en el archivo `indiceFinal.json`, que además de las referencias a los documentos de cada palabra, también guarda las frecuencias y al final del archivo las normas. Por ejemplo:
-
+```python
+{"acostumbr": [[1,1], [10,5]], "blood": [[3,4],[7,1]]}
 ```
-{"diccionario": [["aconstumbr", [[1, 1], [10, 5]]], ["blood", [[3, 4], [7, 1]]], ... ], "normas": {"0": 4.723972227312666, "1": 2.9813075013013317, ... }}
-```
 
-- El token `"acostumbr"` ya fue preprocesado. En el primer documento aparece 1 vez, en el documento de id 10 aparece 5 veces. Como es el primer término su índice de norma seria `"0"`, con valor `4.723972227312666`.
-- El token `"blood"` ya fue preprocesado. En el tercer documento aparece 4 veces, en el séptimo documento aparece 1 vez. Es el segundo término, su índice de norma es `"1"` con valor `2.9813075013013317`.
+- El token `"acostumbr"` ya fue preprocesado. En el primer documento aparece 1 vez, en el documento de id 10 aparece 5 veces.
+- El token `"blood"` ya fue preprocesado. En el tercer documento aparece 4 veces, en el séptimo documento aparece 1 vez.
 
 Si el archivo de índice ya existe el `SPIMI` solo lo utiliza. No necesita crearlo denuevo.
 
