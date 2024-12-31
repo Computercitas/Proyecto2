@@ -518,4 +518,9 @@ PostgreSQL demostró un rendimiento significativamente superior en ambos tipos d
 
 4. Para aplicaciones en producción que requieran búsqueda de texto eficiente, PostgreSQL representa una opción más robusta y escalable.
 
+A continuación se adjunta el video donde explicamos el funcionamiento del proyecto:
+
+[Video de la corrección del Proyecto 2](https://drive.google.com/drive/folders/1pAMMWrZam2vrhau_EaoG1a2p_ssE-ELZ?usp=sharing)
+
+
 
