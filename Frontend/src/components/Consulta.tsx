@@ -16,11 +16,12 @@ const Consulta: React.FC = () => {
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [expandedTrack, setExpandedTrack] = useState<Resultado | null>(null);
   const [searchExecuted, setSearchExecuted] = useState<boolean>(false);
-  const [queryTime, setQueryTime] = useState<number | null>(null);  // Tiempo de ejecución
+  const [queryTime, setQueryTime] = useState<number | null>(null);
+  const [selectedButton, setSelectedButton] = useState<string>(''); // Botón seleccionado
 
-  const mostrarResultados = (data: { results: Resultado[], query_time: number }) => {
+  const mostrarResultados = (data: { results: Resultado[]; query_time: number }) => {
     setResultados(data.results);
-    setQueryTime(data.query_time);  // Asignar el tiempo de ejecución
+    setQueryTime(data.query_time);
     setSearchExecuted(true);
   };
 
@@ -29,6 +30,7 @@ const Consulta: React.FC = () => {
   };
 
   const searchSPIMI = () => {
+    setSelectedButton('SPIMI');
     fetch('http://localhost:5000/search/spimi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,12 +38,13 @@ const Consulta: React.FC = () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        mostrarResultados(data);  // Mostrar resultados con query_time
+        mostrarResultados(data);
       })
       .catch((error) => console.error('Error en búsqueda SPIMI:', error));
   };
 
   const searchPostgres = () => {
+    setSelectedButton('Postgres');
     fetch('http://localhost:5000/search/postgres', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -49,7 +52,7 @@ const Consulta: React.FC = () => {
     })
       .then((response) => response.json())
       .then((data) => {
-        mostrarResultados(data);  // Mostrar resultados con query_time
+        mostrarResultados(data);
       })
       .catch((error) => console.error('Error en búsqueda PostgreSQL:', error));
   };
@@ -93,8 +96,18 @@ const Consulta: React.FC = () => {
         />
       </div>
       <div className="botones-container">
-        <button onClick={searchSPIMI}>SPIMI</button>
-        <button onClick={searchPostgres}>PostgreSQL</button>
+        <button
+          className={selectedButton === 'SPIMI' ? 'active' : ''}
+          onClick={searchSPIMI}
+        >
+          SPIMI
+        </button>
+        <button
+          className={selectedButton === 'Postgres' ? 'active' : ''}
+          onClick={searchPostgres}
+        >
+          PostgreSQL
+        </button>
       </div>
 
       <div id="resultados">
@@ -104,9 +117,7 @@ const Consulta: React.FC = () => {
           </div>
         )}
 
-        {searchExecuted && resultados.length === 0 && (
-          <p>No results found.</p>
-        )}
+        {searchExecuted && resultados.length === 0 && <p>No results found.</p>}
         {resultados.length > 0 && (
           <div className="resultados-container">
             <table className="resultados-table">
@@ -142,13 +153,24 @@ const Consulta: React.FC = () => {
           <div className="overlay">
             <div className="detalle-cancion modal">
               <h2>Song Details</h2>
-              <p><strong>Track Name:</strong> {expandedTrack.track_name}</p>
-              <p><strong>Artist:</strong> {expandedTrack.track_artist}</p>
+              <p>
+                <strong>Track Name:</strong> {expandedTrack.track_name}
+              </p>
+              <p>
+                <strong>Artist:</strong> {expandedTrack.track_artist}
+              </p>
               <div className="lyrics-scroll">
-                <p><strong>Lyrics:</strong> {expandedTrack.lyrics}</p>
+                <p>
+                  <strong>Lyrics:</strong> {expandedTrack.lyrics}
+                </p>
               </div>
-              <p><strong>Similarity:</strong> {expandedTrack.similitudCoseno || expandedTrack.similitud}</p>
-              <p><strong>Row Position:</strong> {expandedTrack.row_position}</p>
+              <p>
+                <strong>Similarity:</strong>{' '}
+                {expandedTrack.similitudCoseno || expandedTrack.similitud}
+              </p>
+              <p>
+                <strong>Row Position:</strong> {expandedTrack.row_position}
+              </p>
               <button onClick={cerrarDetalle}>Close</button>
             </div>
           </div>

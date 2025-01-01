@@ -198,3 +198,9 @@ button:focus {
   border-radius: 8px;
   text-align: center;
 }
+
+/* Estilo de botón activo */
+button.active {
+  background-color: #3b82f6;
+  color: #fff;
+}

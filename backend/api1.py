@@ -12,7 +12,7 @@ app = Flask(__name__)
 CORS(app)  # Permitir CORS para solicitudes desde cualquier origen
 
 # Inicializa el índice SPIMI
-path = './backend/data/spotify_songs.csv'
+path = './data/spotify_songs.csv'
 spimi = SPIMI(csv_path=path)
 
 # Inicializar PostgreSQL
