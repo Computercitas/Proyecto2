@@ -49,7 +49,18 @@ La clase `SPIMI` gestiona la indexación a gran escala y la recuperación eficie
 - **Carga de Datos**: Lee datos de canciones (ID de pista, nombre, artista y letras) desde un archivo CSV.
 - **Preprocesamiento**: Tokeniza, elimina palabras vacías y realiza la derivación de palabras.
 - **Construcción del Índice**: Divide los datos en bloques, indexa frecuencias de términos y calcula las normas de cada documento.
-- **Similitud de Coseno**: Calcula la similitud entre la consulta y los documentos para devolver resultados relevantes.
+- **Similitud de Coseno**: Calcula la similitud entre la consulta y los documentos para devolver resultados relevantes. Para mejorar la eficiencia en el cálculo de la similitud de coseno, se reemplazó la búsqueda lineal en las listas de postings por una búsqueda binaria. Esto se logró mediante los siguientes pasos:
+    1. **Ordenación de las listas de postings:**
+   Durante la construcción del índice invertido, se asegura que las listas de postings de los términos estén ordenadas por `doc_id`.
+    2. **Uso de búsqueda binaria:**
+   Se utiliza el método `bisect_left` de la biblioteca estándar de Python para localizar eficientemente los documentos relevantes en las listas de postings.
+
+    Las ventajas de hacer ello son:
+    - **Eficiencia:** La búsqueda binaria reduce la complejidad de localizar documentos relevantes de \(O(n)\) a \(O(\log n)\).
+    - **Rendimiento escalable:** La mejora es más notable en índices grandes, donde la búsqueda lineal es más costosa.
+
+    Esta implementación garantiza que el cálculo de similitud sea más rápido y eficiente, mejorando el rendimiento general del sistema de recuperación de información.
+
 - **Gestión de Archivos**: Guarda archivos de índice intermedios y los fusiona en un índice final almacenado en formato JSON.
 
 ### Ejemplo de Uso
